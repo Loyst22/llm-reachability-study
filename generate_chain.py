@@ -90,7 +90,7 @@ def generate_chained_method_calls(method_names:list):
     return method_bodies
 
 
-def generate_class_with_multiple_chains(class_name:str, chains:list, chain_generator:function):
+def generate_class_with_multiple_chains(class_name:str, chains:list, chain_generator):
     """Generate a Java class with multiple method chains.
 
     Args:
@@ -229,7 +229,7 @@ python run_experiment.py {path}"""
 
 
         
-def generate_class_new(directory:str, context_size:int, n_chains:int, chain_size:int, depths:list, n_questions:int, chain_generator:function):
+def generate_class_new(directory:str, context_size:int, n_chains:int, chain_size:int, depths:list, n_questions:int, chain_generator):
     """Generate a Java class with multiple method chains and questions about reachability.
     Args:
         directory (str): The directory where the generated files will be saved.
@@ -383,7 +383,6 @@ def generate_really_all():
     ranges_12 = [50, 75, 100, 150, 200]
     ranges_24 = [100]
     write_exps(ranges_24,2)
-
 
 
 # Generate experiments with different context sizes

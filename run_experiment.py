@@ -17,7 +17,7 @@ def run_one_dir(dir):
     model = "Qwen2.5-Coder-1.5B.Q8_0.gguf"
     model = "Qwen2.5-Coder-7B-Instruct.Q8_0.gguf"
     model = "qwen2.5-coder-32b-instruct-q8_0.gguf"
-    model ="qwen2.5-coder-14b-instruct-q8_0.gguf"
+    model = "qwen2.5-coder-14b-instruct-q8_0.gguf"
     model = "Mistral-Small-3.1-24B-Instruct-2503-Q6_K.gguf"
     #model = "Qwen2.5-Coder-1.5B.Q8_0.gguf"
 
