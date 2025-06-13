@@ -29,11 +29,11 @@ import urllib.parse
 
 def update_fixed_file_path(subdir):
     """
-    Search for 'theClass.java' in the specified subdirectory.
+    Search for 'TheClass.java' in the specified subdirectory.
     If found, update the global fixed_file_path to point to this file.
     """
     global fixed_file_path
-    target_file = 'theClass.java'
+    target_file = 'TheClass.java'
 
     # Decode any URL encoding in the path and join with base directory
     decoded_subdir = urllib.parse.unquote(subdir)
@@ -57,7 +57,7 @@ def update_fixed_file_path(subdir):
             print(f"!!!! \n\nFixed file path updated to: {g.fixed_file_path}")
             return  # Exit after finding the first instance
 
-    print("No 'theClass.java' file found in the specified directory.")
+    print("No 'TheClass.java' file found in the specified directory.")
 
 
 @app.route('/')

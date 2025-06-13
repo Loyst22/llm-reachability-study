@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def generate_random_java_method_name():
-    prefixes = [
+    verbs = [
         "get", "set", "is", "calculate", "process", "fetch", "update", "create", "delete", 
         "find", "check", "load", "save", "reset", "clear", "validate", "initialize", 
         "convert", "apply", "enable", "disable", "sort", "merge", "copy", "generate", 
@@ -13,7 +13,7 @@ def generate_random_java_method_name():
         "sync", "execute", "dispatch", "resolve", "filter", "log"
     ]
     
-    verbs = [
+    nouns = [
         "Data", "Item", "Value", "State", "Config", "Status", "Object", "Parameter", "Setting", 
         "Resource", "Detail", "Info", "Message", "Handler", "Element", "Connection", "Index", 
         "Entry", "Key", "Session", "Metric", "Field", "Action", "Notification", "Instance", 
@@ -22,7 +22,7 @@ def generate_random_java_method_name():
         "Map", "Queue", "Stack", "Collection", "Component", "Service", "Manager"
     ]
     
-    nouns = [
+    complements = [
         "ById", "ForUser", "WithFilter", "InCache", "FromDatabase", "FromFile", "ToJson", 
         "FromXml", "IfAvailable", "OrDefault", "AsString", "FromUrl", "OnClick", "InMemory", 
         "FromApi", "ForSession", "WithTimeout", "ForRequest", "FromResponse", "AtIndex", 
@@ -32,11 +32,11 @@ def generate_random_java_method_name():
         "ForExecution", "InParallel", "AsObservable", "IfExists", "WithRetries"
     ]
 
-    prefix = random.choice(prefixes)
     verb = random.choice(verbs)
     noun = random.choice(nouns)
+    complement = random.choice(complements)
 
-    return prefix + verb + noun
+    return verb + noun + complement
 
 def generate_random_method_name(length):
     # Generate a random string of specified length with uppercase, lowercase letters, and digits
@@ -413,7 +413,7 @@ def generate_class(n_method, max_dist, q_per_dist):
     # we need n chains so that there n "ends of chains"
     #all_chains = divide_list_into_sublists(method_names, q_per_dist)
     all_chains = divide_list_with_max(method_names, q_per_dist + 1)
-    the_class = generate_class_with_multiple_chains("MyClass", all_chains)
+    the_class = generate_class_with_multiple_chains("TheClass", all_chains)
     print(the_class)
     print("\n\n\n\n\n")
     all_qs = []
@@ -439,7 +439,7 @@ def generate_class(n_method, max_dist, q_per_dist):
     print(count_distances(selection))
     print(n_method)
     #write_prompt_to_file(prompt_start, the_class, prompt_end, "../llama.cpp-master/system.txt")
-    write_class_to_file(the_class, "../llama.cpp-master/theClass.java")
+    write_class_to_file(the_class, "../llama.cpp-master/TheClass.java")
     write_prompt_to_file(p.in_context, the_class, "../llama.cpp-master/system.txt")
     write_questions_to_file(selection, "../llama.cpp-master/reachability_questions.txt")
     write_chains_to_file(selection,  "../llama.cpp-master/chains.txt")
@@ -521,7 +521,7 @@ def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_
     #all_chains = divide_list_into_sublists(method_names, q_per_dist)
     all_chains = divide_list_into_sublists(method_names, chain_size)
     print("actual number of chains: ", len(all_chains))
-    the_class = generate_class_with_multiple_chains("MyClass", all_chains)
+    the_class = generate_class_with_multiple_chains("TheClass", all_chains)
     #print(the_class)
     #print("\n\n\n\n\n")
     all_qs = []
@@ -548,7 +548,7 @@ def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_
 
 
     #write_prompt_to_file(prompt_start, the_class, prompt_end, "../llama.cpp-master/system.txt")
-    write_class_to_file(the_class,  dir / "theClass.java")
+    write_class_to_file(the_class,  dir / "TheClass.java")
     write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
     write_questions_to_file(selection, dir / "reachability_questions.txt")
     write_chains_to_file(selection, dir / "chains.txt")

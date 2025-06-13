@@ -243,7 +243,7 @@ class ExperimentRunner:
         
         # Generate the class
         the_class = self.class_generator.generate_class_with_multiple_chains(
-            "MyClass", all_chains, chain_generator
+            "TheClass", all_chains, chain_generator
         )
         
         # Generate questions for all chains
@@ -263,7 +263,7 @@ class ExperimentRunner:
 
         # Write all files
         directory.mkdir(parents=True, exist_ok=True)
-        self.file_writer.write_class_to_file(the_class, directory / "theClass.java")
+        self.file_writer.write_class_to_file(the_class, directory / "TheClass.java")
         self.file_writer.write_prompt_to_file(p.in_context, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt")

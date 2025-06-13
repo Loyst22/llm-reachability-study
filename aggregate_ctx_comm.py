@@ -81,7 +81,7 @@ def generate_new_file_path(file_path, X, base_path, max_depth):
     truncated_path = path_parts[:max_depth]
 
     # Add the new file name
-    new_file_name = f"theClass-{X}.java"
+    new_file_name = f"TheClass-{X}.java"
     new_file_path = os.path.abspath(os.path.join(base_path, *truncated_path, new_file_name))
 
     return new_file_path

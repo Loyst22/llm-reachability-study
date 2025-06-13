@@ -591,8 +591,8 @@ def detail_analysis_dir(experiment_dir, model_name):
         chains = batch_dir / "chains.txt"
         methods = batch_dir / "methods.txt"
         class_def = batch_dir / "system.txt"
-        class_file = batch_dir / "theClass.java"
-        physical_methods = extract_methods(extract_class_definition(class_def, "MyClass"))
+        class_file = batch_dir / "TheClass.java"
+        physical_methods = extract_methods(extract_class_definition(class_def, "TheClass"))
         subdirs = [d for d in batch_dir.iterdir() if d.is_dir()]
         for sub in subdirs:
             if model_name in str(sub):
@@ -885,7 +885,7 @@ def write_files(exp_dir, output_dir, write_dir, model_name, hierarchy):
                     # Write the text representation to a file
                     # value[0] is the distance
                     *result, batch_num, code_file_path = res
-                    batch_code_file_name = f"theClass-{batch_num}.java"
+                    batch_code_file_name = f"TheClass-{batch_num}.java"
                     batch_code_path = write_base_dir_code / batch_code_file_name
                     print("base code path is: ", batch_code_path)
                     print("code file path is: ", code_file_path)
@@ -903,7 +903,7 @@ def write_files(exp_dir, output_dir, write_dir, model_name, hierarchy):
 
 #    distance, question, answer, results, contents, call_chain = r
 
-#physical_methods = extract_methods(extract_class_definition(class_def, "MyClass"))
+#physical_methods = extract_methods(extract_class_definition(class_def, "TheClass"))
 #res = detailed_analysis(directory, chains, methods, physical_methods)
 
 

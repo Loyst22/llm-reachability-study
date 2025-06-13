@@ -28,7 +28,16 @@ def run_one_dir(dir):
     print(command)
 
 
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, encoding='latin1', errors="replace")
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        encoding='latin1',
+        errors="replace"
+    )
 
     # Use select to monitor both stdout and stderr
     while True:

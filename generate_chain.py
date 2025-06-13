@@ -6,9 +6,12 @@ from collections import defaultdict
 import control_flow_2
 import big_comments
 
+"""  Generation functions for Java methods and classes with chained method calls."""
 
 def generate_random_java_method_name():
-    prefixes = [
+    """ Generates a random Java method name by combining a verb, a noun, and a complement. """
+    
+    verbs = [
         "get", "set", "is", "calculate", "process", "fetch", "update", "create", "delete", 
         "find", "check", "load", "save", "reset", "clear", "validate", "initialize", 
         "convert", "apply", "enable", "disable", "sort", "merge", "copy", "generate", 
@@ -16,7 +19,7 @@ def generate_random_java_method_name():
         "sync", "execute", "dispatch", "resolve", "filter", "log"
     ]
     
-    verbs = [
+    nouns = [
         "Data", "Item", "Value", "State", "Config", "Status", "Object", "Parameter", "Setting", 
         "Resource", "Detail", "Info", "Message", "Handler", "Element", "Connection", "Index", 
         "Entry", "Key", "Session", "Metric", "Field", "Action", "Notification", "Instance", 
@@ -25,7 +28,7 @@ def generate_random_java_method_name():
         "Map", "Queue", "Stack", "Collection", "Component", "Service", "Manager"
     ]
     
-    nouns = [
+    complements = [
         "ById", "ForUser", "WithFilter", "InCache", "FromDatabase", "FromFile", "ToJson", 
         "FromXml", "IfAvailable", "OrDefault", "AsString", "FromUrl", "OnClick", "InMemory", 
         "FromApi", "ForSession", "WithTimeout", "ForRequest", "FromResponse", "AtIndex", 
@@ -35,13 +38,22 @@ def generate_random_java_method_name():
         "ForExecution", "InParallel", "AsObservable", "IfExists", "WithRetries"
     ]
 
-    prefix = random.choice(prefixes)
     verb = random.choice(verbs)
     noun = random.choice(nouns)
+    complement = random.choice(complements)
 
-    return prefix + verb + noun
+    return verb + noun + complement
 
 def generate_unique_method_names(n):
+    """Generate a list of unique random Java method names.
+
+    Args:
+        n (int): Number of unique method names to generate.
+
+    Returns:
+        list: A list of unique random Java method names.
+    """
+    
     unique_names = set()
     while len(unique_names) < n:
         method_name = generate_random_java_method_name()
@@ -50,6 +62,15 @@ def generate_unique_method_names(n):
     return list(unique_names)
 
 def generate_chained_method_calls(method_names):
+    """Generate a list of Java method bodies that call each other in a chain.
+    Old version, without comments.
+
+    Args:
+        method_names (list): A list of method names to be used in the chain.
+
+    Returns:
+        list : A list of strings, each representing a Java method body that calls the next method in the chain.
+    """
     method_bodies = []
 
     # Loop through the list of method names
@@ -68,11 +89,19 @@ def generate_chained_method_calls(method_names):
     
     return method_bodies
 
-def flatten_list(lst):
-    return [item for sublist in lst for item in sublist]
-
 
 def generate_class_with_multiple_chains(class_name, chains, chain_generator):
+    """Generate a Java class with multiple method chains.
+
+    Args:
+        class_name (String): The name of the class to be generated.
+        chains (list): A list of lists, where each inner list contains method names that form a chain.
+        chain_generator (function): A function that generates the body of a method given a chain of method names.
+
+    Returns:
+        String: A string representing the Java class with multiple method chains.
+    """
+    
     # Generate the chain of method calls
     method_bodies = []
     for c in chains:
@@ -90,8 +119,31 @@ def generate_class_with_multiple_chains(class_name, chains, chain_generator):
 
     return class_body
 
+""" Utility functions for list manipulation. """
+
+def flatten_list(lst):
+    """Flattens a list of lists into a single list."""
+    return [item for sublist in lst for item in sublist]
+
+def divide_list_into_sublists(lst, m):
+    """Divides a list into sublists of a specified size."""
+    # Create sublists of m elements each
+    return [lst[i:i + m] for i in range(0, len(lst), m)]
+
+
+""" Questions related functions """
+
 def select_n_of_distance(questions_with_distances_maybe_chain, distance, n):
-    """Select up to `n` questions with a specified `distance`."""
+    """Select up to `n` questions with a specified `distance`.
+    
+    Args:
+        questions_with_distances_maybe_chain (list): A list of tuples, where each tuple contains a question, its distance, and possibly a chain.
+        distance (int): The distance to filter questions by.
+        n (int): The maximum number of questions to select.
+        
+    Returns:
+        list: A list of up to `n` questions that match the specified distance.
+    """
     # Filter questions by the specified distance
     filtered_questions = list(
         filter(lambda qd: qd[1] == distance, questions_with_distances_maybe_chain)
@@ -99,22 +151,29 @@ def select_n_of_distance(questions_with_distances_maybe_chain, distance, n):
     # Randomly sample up to `n` questions from the filtered list
     return random.sample(filtered_questions, min(n, len(filtered_questions)))
 
-def divide_list_into_sublists(lst, m):
-    """Divides a list into sublists of a specified size."""
-    # Create sublists of m elements each
-    return [lst[i:i + m] for i in range(0, len(lst), m)]
 
 def count_distances(tuples_list):
+    """Count the occurrences of each distance in a list of tuples.
+
+    Args:
+        tuples_list (list): A list of tuples, where each tuple contains a question, its distance, and possibly a chain.
+
+    Returns:
+        dictionary: A dictionary where keys are distances and values are the counts of those distances.
+    """
     count_dict = defaultdict(int)
     
     # Iterate over each tuple in the list
     for item in tuples_list:
-        # Access the last element of the tuple (item[-1])
+        # Retrieve the distance from the tuple
         dist = item[1]
         # Increment the count for this last item
         count_dict[dist] += 1
     
     return count_dict
+
+
+""" File writing functions """
 
 def write_questions_to_file(questions_with_distances, filename):
     """Writes the questions to a file, one per line."""
@@ -127,7 +186,6 @@ def write_class_to_file(body, filename):
     """Writes the questions to a file, one per line."""
     with open(filename, 'w') as f:
         f.write(body)
-
 
 def write_prompt_to_file(prompt, body, filename):
     """Writes the questions to a file, one per line."""
@@ -147,7 +205,41 @@ def write_methods_to_file(methods, filename):
     with open(filename, 'w') as file:
         file.write(" ".join(methods))  # Write each chain pair on a new line, tab separated
 
+def write_slurm(name, path, time):
+    contents = f"""#! /usr/bin/bash
+#SBATCH --job-name=reachability-{name}
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:h100:1
+#SBATCH --constraint=h100
+#SBATCH --ntasks-per-node=1
+#SBATCH --account=spk@h100
+#SBATCH --time={time}
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=romain.robbes@labri.fr
+
+module load arch/h100
+module load cuda/12.8.0
+cd $WORK
+python run_experiment.py {path}"""
+    with open(f'reachability-{name}.slurm', 'w') as file:
+        file.write(contents)
+        
+
+
+        
 def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_questions, chain_generator):
+    """Generate a Java class with multiple method chains and questions about reachability.
+    Args:
+        directory (str): The directory where the generated files will be saved.
+        context_size (int): The size of the context in terms of number of methods.
+        n_chains (int): The number of chains to generate.
+        chain_size (int): The size of each chain.
+        depths (list): A list of distances for which questions will be generated.
+        n_questions (int): The number of questions to generate for each distance.
+        chain_generator (function): A function that generates the body of a method given a chain of method names.
+    """
     # Generate unique random method names
     print("generating a class with:")
     print("methods: ", context_size)
@@ -155,25 +247,34 @@ def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_
     print("number of questions per depth: ", n_questions)
     print("expected total number of questions:", n_questions * len(depths))
 
+    # Generate unique method names
     method_names = generate_unique_method_names(context_size)
+    # Divide the method names into sublists of size `chain_size` : the actual chains of method calls
     all_chains = divide_list_into_sublists(method_names, chain_size)
     print("actual number of chains: ", len(all_chains))
-    the_class = generate_class_with_multiple_chains("MyClass", all_chains, chain_generator)
+    # Generate the class with the chains of method calls
+    the_class = generate_class_with_multiple_chains("TheClass", all_chains, chain_generator)
     
+    # Generate questions about reachability based on the chains (exhaustive)
     all_qs = []
     for chain_names in all_chains:
+        # Generate questions with distances and chains for the current global chain
         questions = generate_call_questions_with_distances_and_chains_new(chain_names)
         all_qs.append(questions)
     all_qs = flatten_list(all_qs)
+    
+    # Select questions based on the specified distances and number of questions
     selection = []
+    # Select questions for each distance in `depths`
     for d in depths:
+        # Both positive and negative distances : negative distances being the longest chain to check before stopping
         selection.extend(select_n_of_distance(all_qs, d, n_questions))
         selection.extend(select_n_of_distance(all_qs, -d, n_questions))
     print("actual number of questions: ", len(selection))
-    print(count_distances(selection))
+    print("questions per distance:", count_distances(selection))
 
     dir = Path(directory)
-    write_class_to_file(the_class,  dir / "theClass.java")
+    write_class_to_file(the_class,  dir / "TheClass.java")
     write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
     write_questions_to_file(selection, dir / "reachability_questions.txt")
     write_chains_to_file(selection, dir / "chains.txt")
@@ -181,7 +282,14 @@ def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_
 
 
 def generate_call_questions_with_distances_and_chains_new(method_names):
-    """Generate questions, distances, and chains for all pairs of methods."""
+    """Generate questions, distances, and chains for all pairs of methods.
+    
+    Args:
+        method_names (list): A list of method names to generate questions for.
+        
+    Returns:
+        list: A list of tuples, where each tuple contains a question, its distance, the chain of methods, and the back chain.
+    """
     questions_with_distances_and_chains = []
     num_methods = len(method_names)
 
@@ -214,6 +322,20 @@ def method_generator(c):
     big_comments.generate_chained_method_calls(c)
 
 def generate_all(exp_name, context_size, depths, n_questions, n_pad, n_comment_lines=0):
+    """Generate a set of Java classes with chained method calls and questions about reachability.
+    Works only for specific context sizes, depths, number of questions, and number of comments.
+
+    Args:
+        exp_name (String): The name of the experiment, used to create a directory for the generated files.
+        context_size (int): The size of the context in terms of number of methods.
+        depths (list): A list of distances for which questions will be generated.
+        n_questions (int): The number of questions to generate for each distance.
+        n_pad (int): The number of padding methods to add to each chain.
+        n_comment_lines (int, optional): Additional comment lines to add to each method body. Defaults to 0.
+
+    Returns:
+        list: A list of directories where the generated files are saved.
+    """
     chain_size = max(depths) + n_pad
     n_methods_needed = chain_size * n_questions
     print("number of methods needed: ", n_methods_needed)
@@ -239,29 +361,13 @@ def generate_all(exp_name, context_size, depths, n_questions, n_pad, n_comment_l
         n_questions_left -= n_chains_in_context
     return dirs
 
-def write_slurm(name, path, time):
-    contents = f"""#! /usr/bin/bash
-#SBATCH --job-name=reachability-{name}
-#SBATCH --nodes=1
-#SBATCH --gres=gpu:h100:1
-#SBATCH --constraint=h100
-#SBATCH --ntasks-per-node=1
-#SBATCH --account=spk@h100
-#SBATCH --time={time}
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.out
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=romain.robbes@labri.fr
-
-module load arch/h100
-module load cuda/12.8.0
-cd $WORK
-python run_experiment.py {path}"""
-    with open(f'reachability-{name}.slurm', 'w') as file:
-        file.write(contents)
 
 def generate_really_all():
+    """ Generate a set of experiments with different context sizes and number of comments.
+    """
+    """ This function generates a set of experiments with different context sizes and number of comments."""
     def write_exps(context_ranges, n_comments):
+        """Generate experiments for different context sizes and number of comments."""
         for context_size in context_ranges:
             depth_ranges = range(1,11) #1 to 10
             n_questions = 200

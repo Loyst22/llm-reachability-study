@@ -397,7 +397,7 @@ class ExperimentRunner:
         
         # Generate the class/module
         the_class = lang_generator.generate_class_with_multiple_chains(
-            "MyClass", all_chains, chain_generator
+            "TheClass", all_chains, chain_generator
         )
         
         # Generate questions for all chains
@@ -421,7 +421,7 @@ class ExperimentRunner:
         directory.mkdir(parents=True, exist_ok=True)
         
         # Use language-specific file extension
-        class_filename = f"theClass{lang_generator.get_file_extension()}"
+        class_filename = f"TheClass{lang_generator.get_file_extension()}"
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
         self.file_writer.write_prompt_to_file(p.in_context, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
