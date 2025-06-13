@@ -33,16 +33,28 @@ dirs_to_remove = [
     "largish-plus-flow",
     "very-large-flow",
     "very-very-large-flow",
-    "huge-flow"
+    "huge-flow",
+    "tree_exp"
 ]
 
-deleted = 0
+deleted_dirs = 0
 for folder in dirs_to_remove:
     if os.path.isdir(folder):
         print(f"Suppression de {folder}")
         shutil.rmtree(folder)
-        deleted += 1
+        deleted_dirs += 1
     else:
         print(f"{folder} introuvable, ignoré.")
+        
+# Suppression des fichiers .slurm dans le dossier courant
+slurm_files = [f for f in os.listdir(".") if f.endswith(".slurm")]
+deleted_files = 0
+for f in slurm_files:
+    try:
+        os.remove(f)
+        print(f"Fichier supprimé : {f}")
+        deleted_files += 1
+    except Exception as e:
+        print(f"Erreur lors de la suppression de {f} : {e}")
 
-print(f"\nNettoyage terminé. {deleted} dossier(s) supprimé(s).")
+print(f"\nNettoyage terminé. {deleted_dirs} dossier(s) supprimé(s), {deleted_files} fichier(s) .slurm supprimé(s).")
