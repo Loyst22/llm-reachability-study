@@ -44,7 +44,7 @@ def generate_random_java_method_name():
 
     return verb + noun + complement
 
-def generate_unique_method_names(n):
+def generate_unique_method_names(n:int):
     """Generate a list of unique random Java method names.
 
     Args:
@@ -61,7 +61,7 @@ def generate_unique_method_names(n):
     
     return list(unique_names)
 
-def generate_chained_method_calls(method_names):
+def generate_chained_method_calls(method_names:list):
     """Generate a list of Java method bodies that call each other in a chain.
     Old version, without comments.
 
@@ -90,7 +90,7 @@ def generate_chained_method_calls(method_names):
     return method_bodies
 
 
-def generate_class_with_multiple_chains(class_name, chains, chain_generator):
+def generate_class_with_multiple_chains(class_name:str, chains:list, chain_generator:function):
     """Generate a Java class with multiple method chains.
 
     Args:
@@ -121,11 +121,11 @@ def generate_class_with_multiple_chains(class_name, chains, chain_generator):
 
 """ Utility functions for list manipulation. """
 
-def flatten_list(lst):
+def flatten_list(lst:list):
     """Flattens a list of lists into a single list."""
     return [item for sublist in lst for item in sublist]
 
-def divide_list_into_sublists(lst, m):
+def divide_list_into_sublists(lst:list, m:int):
     """Divides a list into sublists of a specified size."""
     # Create sublists of m elements each
     return [lst[i:i + m] for i in range(0, len(lst), m)]
@@ -133,7 +133,7 @@ def divide_list_into_sublists(lst, m):
 
 """ Questions related functions """
 
-def select_n_of_distance(questions_with_distances_maybe_chain, distance, n):
+def select_n_of_distance(questions_with_distances_maybe_chain:list, distance:int, n:int):
     """Select up to `n` questions with a specified `distance`.
     
     Args:
@@ -152,7 +152,7 @@ def select_n_of_distance(questions_with_distances_maybe_chain, distance, n):
     return random.sample(filtered_questions, min(n, len(filtered_questions)))
 
 
-def count_distances(tuples_list):
+def count_distances(tuples_list:list):
     """Count the occurrences of each distance in a list of tuples.
 
     Args:
@@ -175,32 +175,32 @@ def count_distances(tuples_list):
 
 """ File writing functions """
 
-def write_questions_to_file(questions_with_distances, filename):
+def write_questions_to_file(questions_with_distances:list, filename:str):
     """Writes the questions to a file, one per line."""
     with open(filename, 'w') as f:
         for question, dist, *rest in questions_with_distances:
             # Write only the question (ignoring the distance) to the file
             f.write(f"{dist}\t{question}\n")
 
-def write_class_to_file(body, filename):
+def write_class_to_file(body:str, filename:str):
     """Writes the questions to a file, one per line."""
     with open(filename, 'w') as f:
         f.write(body)
 
-def write_prompt_to_file(prompt, body, filename):
+def write_prompt_to_file(prompt:str, body:str, filename:str):
     """Writes the questions to a file, one per line."""
     with open(filename, 'w') as f:
         f.write(prompt["start"])
         f.write(body)
         f.write(prompt["end"])
 
-def write_chains_to_file(questions, filename):
+def write_chains_to_file(questions:list, filename:str):
     """Write all chains from the questions list to a file, one per line."""
     with open(filename, 'w') as file:
         for question, dist, chain, back_chain in questions:
             file.write(" ".join(chain) + '\t' + " ".join(back_chain) + '\n')  # Write each chain pair on a new line, tab separated
 
-def write_methods_to_file(methods, filename):
+def write_methods_to_file(methods:list, filename:str):
     """Write all chains from the questions list to a file, one per line."""
     with open(filename, 'w') as file:
         file.write(" ".join(methods))  # Write each chain pair on a new line, tab separated
@@ -229,7 +229,7 @@ python run_experiment.py {path}"""
 
 
         
-def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_questions, chain_generator):
+def generate_class_new(directory:str, context_size:int, n_chains:int, chain_size:int, depths:list, n_questions:int, chain_generator:function):
     """Generate a Java class with multiple method chains and questions about reachability.
     Args:
         directory (str): The directory where the generated files will be saved.
@@ -281,7 +281,7 @@ def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_
     write_methods_to_file(method_names,  dir / "methods.txt")
 
 
-def generate_call_questions_with_distances_and_chains_new(method_names):
+def generate_call_questions_with_distances_and_chains_new(method_names:list):
     """Generate questions, distances, and chains for all pairs of methods.
     
     Args:
@@ -321,7 +321,7 @@ def generate_call_questions_with_distances_and_chains_new(method_names):
 def method_generator(c):
     big_comments.generate_chained_method_calls(c)
 
-def generate_all(exp_name, context_size, depths, n_questions, n_pad, n_comment_lines=0):
+def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n_pad:int, n_comment_lines=0):
     """Generate a set of Java classes with chained method calls and questions about reachability.
     Works only for specific context sizes, depths, number of questions, and number of comments.
 
@@ -386,55 +386,62 @@ def generate_really_all():
 
 
 
+# Generate experiments with different context sizes
+# ext means extreme as we are generating experiments with long chains of method calls
 
 """
-dirs = generate_all("small-ext", 30, range(8,13), 100, 2)
-dirs = generate_all("smallish-ext", 50, range(8,13), 100, 2)
-dirs = generate_all("medium-ext", 75, range(8,13), 100, 2)
-dirs = generate_all("medium-plus-ext", 100, range(8,13), 100, 2)
-dirs = generate_all("medium-plus-plus-ext", 125, range(8,13), 100, 2)
-dirs = generate_all("medium-large-ext", 150, range(8,13), 100, 2)
-dirs = generate_all("medium-large-plus-ext", 175, range(8,13), 100, 2)
-dirs = generate_all("largish-ext", 200, range(8,13), 100, 2)
-dirs = generate_all("largish-plus-ext", 250, range(8,13), 100, 2)
-dirs = generate_all("very-large-ext", 300, range(8,13), 100, 2)
-dirs = generate_all("very-very-large-ext", 350, range(8,13), 100, 2)
-dirs = generate_all("huge-ext", 400, range(8,13), 100, 2)
+generate_all("small-ext", 30, range(8,13), 100, 2)
+generate_all("smallish-ext", 50, range(8,13), 100, 2)
+generate_all("medium-ext", 75, range(8,13), 100, 2)
+generate_all("medium-plus-ext", 100, range(8,13), 100, 2)
+generate_all("medium-plus-plus-ext", 125, range(8,13), 100, 2)
+generate_all("medium-large-ext", 150, range(8,13), 100, 2)
+generate_all("medium-large-plus-ext", 175, range(8,13), 100, 2)
+generate_all("largish-ext", 200, range(8,13), 100, 2)
+generate_all("largish-plus-ext", 250, range(8,13), 100, 2)
+generate_all("very-large-ext", 300, range(8,13), 100, 2)
+generate_all("very-very-large-ext", 350, range(8,13), 100, 2)
+generate_all("huge-ext", 400, range(8,13), 100, 2)
 """
 
+# Generate experiments with different context sizes, similar to the above
+# Some experiments are for smaller chains
+
 """
-dirs = generate_all("small-flow-ext", 30, range(8,13), 100, 2)
-dirs = generate_all("smallish-flow-ext", 50, range(8,13), 100, 2)
-dirs = generate_all("medium-flow-ext", 75, range(8,13), 100, 2)
-dirs = generate_all("medium-plus-flow-ext", 100, range(8,13), 100, 2)
-dirs = generate_all("medium-plus-plus-flow-ext", 125, range(8,13), 100, 2)
-dirs = generate_all("medium-large-flow-ext", 150, range(8,13), 100, 2)
-dirs = generate_all("medium-large-plus-flow-ext", 175, range(8,13), 100, 2)
-dirs = generate_all("largish-flow-ext", 200, range(8,13), 100, 2)
-dirs = generate_all("largish-plus-flow-ext", 250, range(8,13), 100, 2)
-dirs = generate_all("very-large-flow-ext", 300, range(8,13), 100, 2)
-dirs = generate_all("very-very-large-flow-ext", 350, range(8,13), 100, 2)
-dirs = generate_all("huge-flow-ext", 400, range(8,13), 100, 2)
-dirs = generate_all("medium-large-plus-flow", 175, range(1, 8), 100, 2)
-dirs = generate_all("largish-flow", 200, range(1, 8), 100, 2)
-dirs = generate_all("largish-plus-flow", 250, range(1, 8), 100, 2)
-dirs = generate_all("very-large-flow", 300, range(1, 8), 100, 2)
-dirs = generate_all("very-very-large-flow", 350, range(1, 8), 100, 2)
-dirs = generate_all("huge-flow", 400, range(1, 8), 100, 2)
+generate_all("small-flow-ext", 30, range(8,13), 100, 2)
+generate_all("smallish-flow-ext", 50, range(8,13), 100, 2)
+generate_all("medium-flow-ext", 75, range(8,13), 100, 2)
+generate_all("medium-plus-flow-ext", 100, range(8,13), 100, 2)
+generate_all("medium-plus-plus-flow-ext", 125, range(8,13), 100, 2)
+generate_all("medium-large-flow-ext", 150, range(8,13), 100, 2)
+generate_all("medium-large-plus-flow-ext", 175, range(8,13), 100, 2)
+generate_all("largish-flow-ext", 200, range(8,13), 100, 2)
+generate_all("largish-plus-flow-ext", 250, range(8,13), 100, 2)
+generate_all("very-large-flow-ext", 300, range(8,13), 100, 2)
+generate_all("very-very-large-flow-ext", 350, range(8,13), 100, 2)
+generate_all("huge-flow-ext", 400, range(8,13), 100, 2)
+generate_all("medium-large-plus-flow", 175, range(1, 8), 100, 2)
+generate_all("largish-flow", 200, range(1, 8), 100, 2)
+generate_all("largish-plus-flow", 250, range(1, 8), 100, 2)
+generate_all("very-large-flow", 300, range(1, 8), 100, 2)
+generate_all("very-very-large-flow", 350, range(1, 8), 100, 2)
+generate_all("huge-flow", 400, range(1, 8), 100, 2)
 """
-#dirs = generate_all("test/ctx-80", 80, range(1, 11), 200, 0, 0)
 
-generate_really_all()
+# generate_all("test/ctx-80", 80, range(1, 11), 200, 0, 0)
 
-#generate_all("small-comment", 30, range(1,8), 100, 2)
-#generate_all("smallish-comment", 50, range(1,8), 100, 2)
-#generate_all("medium-comment", 75, range(1,8), 100, 2)
-#generate_all("medium-plus-comment", 100, range(1,8), 100, 2)
-#generate_all("medium-plus-plus-comment", 125, range(1,8), 100, 2)
-#generate_all("medium-large-comment", 125, range(1,8), 100, 2)
+""" generate_really_all() """
 
+# Similar to the above, but with comments
 
-
+"""
+generate_all("small-comment", 30, range(1,8), 100, 2)
+generate_all("smallish-comment", 50, range(1,8), 100, 2)
+generate_all("medium-comment", 75, range(1,8), 100, 2)
+generate_all("medium-plus-comment", 100, range(1,8), 100, 2)
+generate_all("medium-plus-plus-comment", 125, range(1,8), 100, 2)
+generate_all("medium-large-comment", 125, range(1,8), 100, 2)
+"""
 
 # we need chains of at least length n, and we need at least n_questions of them for distance 1
 # chain of length 10:
