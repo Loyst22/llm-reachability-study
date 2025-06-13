@@ -34,7 +34,8 @@ dirs_to_remove = [
     "very-large-flow",
     "very-very-large-flow",
     "huge-flow",
-    "tree_exp"
+    "tree_exp",
+    "large_tree_exp"
 ]
 
 deleted_dirs = 0
