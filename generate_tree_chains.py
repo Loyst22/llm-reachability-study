@@ -77,7 +77,7 @@ Example : a complete binary tree of depth 3 has 15 methods, and the max length o
 Note that we don't consider backtracking in this heuristic, but it might be relevant for the LLM reasoning process.
 """
 
-def generate_call_tree(tree_depth:int):
+def generate_single_call_tree(tree_depth:int):
     """Generate a list of method bodies that call each other in a tree-like structure.
 
     Args:
@@ -89,37 +89,37 @@ def generate_call_tree(tree_depth:int):
     print("Method names:", method_names)
     root = method_tree.build_binary_tree(tree_depth, method_names)
     return root
-    
-def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list):
-    """Generate a class with methods that call each other in a tree-like structure.
+
+def generate_single_call_tree_from_names(tree_depth:int, method_names:list):
+    """Generate a single call tree from a list of method names.
 
     Args:
-        directory (str): The directory where the generated files will be saved.
         tree_depth (int): The depth of the tree to be generated.
+        method_names (list): A list of method names to be used in the tree structure.
     """
-    print(f"Generating classes for trees :")
-    for tree in trees:
-        tree.print_tree()
-    
-    method_bodies = generate_tree_method_calls(trees)
-    
-    print(f"Generated {len(method_bodies)} method bodies")
-    
-    # Shuffle the method bodies to create random order in the class
-    random.shuffle(method_bodies)
+    print(f"Generating a tree with {len(method_names)} methods and depth {tree_depth}")
+    print("Method names:", method_names)
+    root = method_tree.build_binary_tree(tree_depth, method_names)
+    return root
 
-    # Construct the class with shuffled method bodies
-    class_body = f"public class {class_name} {{\n"
-    class_body += "\n\n".join(method_bodies)
-    class_body += "\n}"
-    
-    dir = Path(directory)
-    dir.mkdir(parents=True, exist_ok=True)
-    gen.write_class_to_file(class_body,  dir / "TheClass.java")
-    # write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
-    # write_questions_to_file(selection, dir / "reachability_questions.txt")
-    # write_chains_to_file(selection, dir / "chains.txt")
-    # write_methods_to_file(method_names,  dir / "methods.txt")  
+def generate_many_call_trees(tree_depth:int, n_trees:int):
+    """Generate a list of method bodies that call each other in a tree-like structure.
+
+    Args:
+        tree_depth (int): The depth of the tree to be generated.
+        n_trees (int): The number of trees to generate.
+    """
+    method_names = gen.generate_unique_method_names(n_trees * (2**(tree_depth + 1) - 1))
+    trees = []
+    for i in range(n_trees):
+        print(f"Generating tree {i+1}/{n_trees} with depth {tree_depth}")
+        tree = generate_single_call_tree_from_names(tree_depth, method_names[i * (2**(tree_depth + 1) - 1):(i + 1) * (2**(tree_depth + 1) - 1)])
+        trees.append(tree)
+        
+    for tree in trees:
+        tree.write_tree_to_file(f"tree_exp/tree_structure_{trees.index(tree)}.txt")
+        
+    return trees
     
 def generate_tree_method_calls(trees:list):
     """Generate a list of Java method bodies that call each other in a tree like structure.
@@ -157,12 +157,57 @@ def generate_tree_method_calls_rec(tree:method_tree.Node):
 
 def generate_single_method_body(subtree:method_tree.Node):
     if subtree.left is None and subtree.right is None:
-        return f"public void {subtree.name}() {{\n    // End of chain\n}}"
+        return f"    public void {subtree.name}() {{\n        // End of chain\n    }}"
     else: 
-        return f"public void {subtree.name}() {{\n    {subtree.left.name}();\n    {subtree.right.name}();\n}}"
+        return f"    public void {subtree.name}() {{\n        {subtree.left.name}();\n        {subtree.right.name}();\n    }}"
 
+
+def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list):
+    """Generate a class with methods that call each other in a tree-like structure.
+
+    Args:
+        directory (str): The directory where the generated files will be saved.
+        tree_depth (int): The depth of the tree to be generated.
+    """
+    print(f"Generating classes for trees :")
+    for tree in trees:
+        tree.print_tree()
     
-tree = generate_call_tree(5)  # Generate a tree with depth 5
-generate_class_from_multiple_trees("tree_exp", "TheClass", [tree])
+    method_bodies = generate_tree_method_calls(trees)
     
-# def generate_exp(exp_name:str, )
+    print(f"Generated {len(method_bodies)} method bodies")
+    
+    # Shuffle the method bodies to create random order in the class
+    random.shuffle(method_bodies)
+
+    # Construct the class with shuffled method bodies
+    class_body = f"public class {class_name} {{\n"
+    class_body += "\n\n".join(method_bodies)
+    class_body += "\n}"
+    
+    dir = Path(directory)
+    dir.mkdir(parents=True, exist_ok=True)
+    gen.write_class_to_file(class_body,  dir / "TheClass.java")
+    # write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
+    # write_questions_to_file(selection, dir / "reachability_questions.txt")
+    # write_chains_to_file(selection, dir / "chains.txt")
+    # write_methods_to_file(method_names,  dir / "methods.txt")  
+    
+def generate_exp(exp_name:str, n_trees:int, tree_depth:int):
+    """Generate an experiment with multiple trees and save the class to a file.
+
+    Args:
+        exp_name (str): The name of the experiment.
+        n_trees (int): The number of trees to generate.
+        tree_depth (int): The depth of each tree.
+    """
+    print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {exp_name}")
+    trees = generate_many_call_trees(tree_depth, n_trees)
+    print(f"Generated {len(trees)} trees")
+    generate_class_from_multiple_trees(exp_name, "TheClass", trees)
+    
+# tree = generate_single_call_tree(5)  # Generate a tree with depth 5
+# generate_class_from_multiple_trees("tree_exp", "TheClass", [tree])
+# tree.write_tree_to_file("tree_exp/tree_structure.txt")
+    
+generate_exp("tree_exp", 3, 5)  # Generate an experiment with 3 trees of depth 5
