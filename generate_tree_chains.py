@@ -2,6 +2,7 @@ from pathlib import Path
 import random
 import generate_chain as gen
 import method_tree
+import prompts as p
 
 """
             Première idée :
@@ -192,7 +193,7 @@ def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list
     gen.write_methods_to_file(method_names,  dir / "methods.txt")  
     write_chains_to_file(selection, dir / "chains.txt")
     gen.write_questions_to_file(selection, dir / "reachability_questions.txt")
-    # write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
+    gen.write_prompt_to_file(p.in_context_tree_calls, class_body, dir / "system.txt")
     
 def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None):
     """Generate an experiment with multiple trees and save the class to a file.
