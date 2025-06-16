@@ -193,6 +193,8 @@ def find_list_of_unreachable_methods(node: Node, root: Node) -> list:
 
 # Build a binary tree with a depth of 3 and method names
 
+"""
+
 method_names = [
 "foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply",
 "waldo", "fred", "plugh", "xyzzy", "thud", "zedd", "last"
@@ -205,3 +207,5 @@ print("Invalid chains found:")
 
 for chain in invalid_chains:
     print(f"Node: {chain['node']}, Unreachable methods: {chain['unreachable_methods']}, Distance: {chain['distance']}, Chain: {chain['chain']}")
+
+"""
