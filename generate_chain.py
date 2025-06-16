@@ -368,7 +368,6 @@ def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n
 def generate_really_all():
     """ Generate a set of experiments with different context sizes and number of comments.
     """
-    """ This function generates a set of experiments with different context sizes and number of comments."""
     def write_exps(context_ranges, n_comments):
         """Generate experiments for different context sizes and number of comments."""
         for context_size in context_ranges:
