@@ -11,6 +11,9 @@ import big_comments
 def generate_random_java_method_name():
     """ Generates a random Java method name by combining a verb, a noun, and a complement. """
     
+    
+    # There are 38 verbs, 49 nouns, and 45 complements.
+    # This gives us a total of 38 * 49 * 45 = 83,790 unique method names.
     verbs = [
         "get", "set", "is", "calculate", "process", "fetch", "update", "create", "delete", 
         "find", "check", "load", "save", "reset", "clear", "validate", "initialize", 
