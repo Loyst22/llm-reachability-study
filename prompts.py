@@ -56,14 +56,17 @@ in_context_tree_calls = {
 Be truthful, I don’t care whether the methods call each other or not, it does not affect me. Always end your answer with FINAL ANSWER: YES or FINAL ANSWER: NO. Here is an example code snippet:
 ```
 public class Example {
+    public void grault() {
+        // End of chain
+    }
+    
     public void foo() {
         bar();
         baz();
     }
-
-    public void bar() {
-        qux();
-        corge();
+    
+    public void corge() {
+        // End of chain
     }
     
     public void baz() {
@@ -75,17 +78,15 @@ public class Example {
         // End of chain
     }
         
-    public void corge() {
-        // End of chain
+    public void bar() {
+        qux();
+        corge();
     }
-        
+    
     public void quux() {
         // End of chain
     }
         
-    public void grault() {
-        // End of chain
-    }
 }```
 Here are example questions:
     
