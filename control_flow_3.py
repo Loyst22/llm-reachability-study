@@ -11,11 +11,13 @@ class Variable:
     def __repr__(self):
         return f"{self.name} ({self.var_type} = {self.value})"
 
-def random_variable_name():
+""" Random generation functions for control flow in Java methods. """
+
+def random_variable_name() -> str:
     """Randomly pick a variable name."""
     return random.choice(["x", "y", "z", "counter", "flag"])
 
-def random_variable():
+def random_variable() -> Variable:
     """Generate a random variable with a type and value."""
     var_name = random_variable_name()
     var_type = random.choice(["int", "boolean", "double"])
@@ -29,7 +31,7 @@ def random_variable():
     
     return Variable(var_name, var_type, value)
 
-def random_condition(variables):
+def random_condition(variables: list) -> list:
     """Generate a simple condition that always evaluates to True using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
@@ -51,11 +53,11 @@ def random_condition(variables):
         else:
             return f"{var.name} >= {var.value}"  # z >= value where z > value
     
-def random_method_call(called_method):
+def random_method_call(called_method: str) -> str:
     """Generate the next method call using the given method name."""
     return f"\t{called_method}();"
 
-def random_loop():
+def random_loop() -> str:
     """Generate a random for or while loop."""
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
@@ -63,8 +65,20 @@ def random_loop():
     else:  # while loop
         return f"\twhile (counter < 5) {{\n\t{random_method_call('nextMethod')}\n\t\tcounter++;\n\t}}"
 
-def generate_method_body(called_method, variables, next_method):
-    """Generate a method body with simple control flow, declarations, and method calls."""
+""" Method body generation functions. """
+
+def generate_method_body(called_method: str, variables: list, next_method: str) -> str:
+    # TODO : this generation method is not correct, it creates recursive functions since called_method calls itself
+    """Generate a method body with simple control flow, declarations, and method calls.
+    
+    Args: 
+        called_method (str): name of the method being called
+        variables (list) : list of the variables being used
+        next_method (str) : name of the method being called
+        
+    Returns: 
+        str: Java method body with variable declarations, conditions, and method calls
+    """
     body = []
     
     # Declare random variables (can be empty)
@@ -83,12 +97,19 @@ def generate_method_body(called_method, variables, next_method):
         body.append(random_loop())
     
     # Add the actual method call (to the next method in the chain)
-    body.append(f"    {called_method}();")
+    body.append(f"\t{called_method}();")
     
     return "\n".join(body)
 
-def generate_method_bodies(method_names):
-    """Generate random method bodies for a list of method names."""
+def generate_method_bodies(method_names: list) -> list:
+    """Generate random method bodies for a list of method names.
+
+    Args:
+        method_names (list): list of method names to generate bodies for
+
+    Returns:
+        list: list of Java method bodies as strings
+    """
     bodies = []
     variables = []  # List to store declared variables
     
@@ -100,6 +121,8 @@ def generate_method_bodies(method_names):
         bodies.append(f"public void {method_name}() {{\n{body}\n}}")
     
     return bodies
+
+""" Test """
 
 # Example usage
 method_names = generate_chain.generate_unique_method_names(15)
