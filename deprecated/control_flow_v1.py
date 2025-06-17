@@ -1,6 +1,8 @@
 import random
 import generate_chain
 
+""" Random generation functions for control flow in Java methods. """
+
 def random_variable():
     """Randomly pick a variable name."""
     return random.choice(["x", "y", "z", "counter", "flag"])
@@ -33,6 +35,8 @@ def random_loop():
     else:  # while loop
         return f"\twhile (counter < 5) {{ \n\t\t{random_method_call('methodThree')} \n\t\tcounter++; \n\t}}"
 
+""" Method body generation functions. """
+
 def generate_method_body(called_method):
     """Generate a method body with simple control flow, declarations, and method calls."""
     body = []
@@ -64,6 +68,8 @@ def generate_method_bodies(method_names):
         body = generate_method_body(called_method)
         bodies.append(f"public void {method_name}() {{\n{body}\n}}")
     return bodies
+
+""" Test """
 
 # Example usage
 method_names = generate_chain.generate_unique_method_names(10)
