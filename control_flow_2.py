@@ -2,7 +2,6 @@ import random
 import generate_chain
 
 # restructure to pass a function to generate bodies to generate_chain
-# import generate_chain
 
 # Simple data structure to hold variable information
 class Variable:
@@ -14,11 +13,13 @@ class Variable:
     def __repr__(self):
         return f"{self.name} ({self.var_type} = {self.value})"
 
-def random_variable_name():
-    """Randomly pick a variable name."""
+""" Random generation functions for control flow in Java methods. """
+
+def random_variable_name() -> str:
+    """Randomly pick a variable name among a predefined set."""
     return random.choice(["x", "y", "z", "counter", "flag"])
 
-def random_variable():
+def random_variable() -> Variable:
     """Generate a random variable with a type and value."""
     var_name = random_variable_name()
     var_type = random.choice(["int", "boolean", "double"])
@@ -32,7 +33,7 @@ def random_variable():
     
     return Variable(var_name, var_type, value)
 
-def random_condition(variables):
+def random_condition(variables) -> str:
     """Generate a simple condition that always evaluates to True using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
@@ -54,11 +55,11 @@ def random_condition(variables):
         else:
             return f"{var.name} >= {var.value}"  # z >= value where z > value
     
-def random_method_call(called_method):
+def random_method_call(called_method: str) -> str:
     """Generate the next method call."""
-    return f"    {called_method}();"
+    return f"\t{called_method}();"
 
-def random_loop():
+def random_loop() -> str:
     """Generate a random for or while loop."""
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
@@ -67,8 +68,19 @@ def random_loop():
     else:  # while loop
         return f"\twhile (counter < 5) {{\n\t\tcounter++;\n\t}}"
 
-def generate_method_body(called_method, n_vars):
-    """Generate a method body with simple control flow, declarations, and method calls."""
+""" Method body generation functions. """
+
+def generate_method_body(called_method: str, n_vars: int) -> str:
+    """Generate a method body with simple control flow, declarations, and method calls.
+
+    Args:
+        called_method (str): name of the method being called
+        n_vars (int): number of variables to declare in the method body
+
+    Returns:
+        str: Java method body with variable declarations, conditions, and method calls
+    """
+
     body = []
     variables = []
     
@@ -91,23 +103,41 @@ def generate_method_body(called_method, n_vars):
     #    
     
     # Add the actual method call (to the next method in the chain)
-    #body.append(f"    {called_method}();")
+    #body.append(f"\t{called_method}();")
     
     return "\n".join(body)
 
-def generate_method(caller, called, nvars):
+def generate_method(caller: str, called: str, nvars: int) -> str:
+    """Generate a method that calls another method with a specified number of variables.
+
+    Args:
+        caller (str): name of the caller method being generated
+        called (str): name of the method being called
+        nvars (int): number of variables to declare in the method body
+
+    Returns:
+        str: Java method definition with a body that includes variable declarations
+    """
     body = generate_method_body(called, nvars)
     return f"public void {caller}() {{\n{body}\n}}"
 
-def generate_method_bodies(method_names):
-    """Generate random method bodies for a list of method names."""
+def generate_method_bodies(method_names: list) -> list:
+    """Generate random method bodies for a list of method names.
+
+    Args:
+        method_names (list): list of method names to generate bodies for
+
+    Returns:
+        list: list of Java method bodies as strings
+    """
     bodies = []
-    variables = []  # List to store declared variables
+    # variables = []  # List to store declared variables
     
     for i, method_name in enumerate(method_names):
         # Each method calls the next one in the list, or wraps around to the first
         called_method = method_names[(i + 1) % len(method_names)]
-        # ! weird 
+        
+        # ! weird : shouldn't work to pass variables, since it is a list not a number
         # body = generate_method_body(called_method, variables)
         body = generate_method_body(called_method, 3) 
         bodies.append(f"public void {method_name}() {{\n{body}\n}}")
@@ -115,7 +145,15 @@ def generate_method_bodies(method_names):
     return bodies
 
 
-def generate_chained_method_calls(method_names):
+def generate_chained_method_calls(method_names: list) -> list:
+    """Generate a series of method bodies where each method calls the next one in the list.
+    
+    Args:
+        method_names (list): list of method names to generate bodies for
+    
+    Returns:
+        list: list of Java method bodies as strings, where each method calls the next
+    """
     method_bodies = []
 
     # Loop through the list of method names
@@ -134,6 +172,8 @@ def generate_chained_method_calls(method_names):
         method_bodies.append(method_body)
     
     return method_bodies
+
+""" Test """
 
 # Example usage
 method_names = generate_chain.generate_unique_method_names(15)
