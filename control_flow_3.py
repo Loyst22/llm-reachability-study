@@ -57,13 +57,13 @@ def random_method_call(called_method: str) -> str:
     """Generate the next method call using the given method name."""
     return f"\t{called_method}();"
 
-def random_loop() -> str:
+def random_loop(next_method: str) -> str:
     """Generate a random for or while loop."""
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
-        return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t{random_method_call('nextMethod')}\n\t}}"
+        return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t{random_method_call(next_method)}\n\t}}"
     else:  # while loop
-        return f"\twhile (counter < 5) {{\n\t{random_method_call('nextMethod')}\n\t\tcounter++;\n\t}}"
+        return f"\twhile (counter < 5) {{\n\t{random_method_call(next_method)}\n\t\tcounter++;\n\t}}"
 
 """ Method body generation functions. """
 
@@ -94,7 +94,7 @@ def generate_method_body(called_method: str, variables: list, next_method: str) 
     
     # Add an optional loop (either a for loop or a while loop)
     if random.choice([True, False]):
-        body.append(random_loop())
+        body.append(random_loop(next_method))
     
     # Add the actual method call (to the next method in the chain)
     body.append(f"\t{called_method}();")
@@ -122,13 +122,15 @@ def generate_method_bodies(method_names: list) -> list:
     
     return bodies
 
+
+def generate_full_class(nb_methods: int=15, nb_loops: int=None, nb_if: int=None, nb_chains: int=1):
+    method_names = generate_chain.generate_unique_method_names(nb_methods)
+    method_bodies = generate_method_bodies(method_names)
+    
+    for body in method_bodies:
+        print(body)
+        print()
+
 """ Test """
 
-# Example usage
-method_names = generate_chain.generate_unique_method_names(15)
-method_bodies = generate_method_bodies(method_names)
-
-# Print the generated method bodies
-for body in method_bodies:
-    print(body)
-    print()
+generate_full_class()
