@@ -195,7 +195,7 @@ def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list
     gen.write_questions_to_file(selection, dir / "reachability_questions.txt")
     gen.write_prompt_to_file(p.in_context_tree_calls, class_body, dir / "system.txt")
     
-def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None):
+def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None, n_questions:int = 100):
     """Generate an experiment with multiple trees and save the class to a file.
 
     Args:
@@ -219,9 +219,9 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     for depth in range(2, max_chain_length + 1):
         print(f"Generating questions for chains of depth {depth}")
         # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
-        selection.extend(gen.select_n_of_distance(valid_questions, depth, 100))
+        selection.extend(gen.select_n_of_distance(valid_questions, depth, n_questions))
         # TODO : handle negative depths 
-        selection.extend(gen.select_n_of_distance(invalid_questions, -depth, 100))
+        selection.extend(gen.select_n_of_distance(invalid_questions, -depth, n_questions))
     print(f"Selected {len(selection)} questions")
     print(f"Questions per distance after selection: {gen.count_distances(selection)}")
     
@@ -329,6 +329,6 @@ def write_chains_to_file(questions:list, filename:str):
             file.write(" ".join(chain) + '\n')  # Write each chain on a new line
 
 # Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
-generate_exp(exp_name="tree_exp", n_trees=3, tree_depth=3)
+# generate_exp(exp_name="tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
 # Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
-# generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6)
+generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)

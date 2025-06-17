@@ -1,6 +1,7 @@
 .vscode
 __pycache__
 *.slurm
+a_faire.txt
 
 # Ignore generated files
 xps
@@ -36,4 +37,5 @@ very-very-large-flow
 huge-flow
 
 tree_exp
+tree_exp_2
 large_tree_exp
