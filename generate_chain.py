@@ -3,7 +3,6 @@ import string
 import prompts as p
 from pathlib import Path
 from collections import defaultdict
-import control_flow_2
 import big_comments
 
 """  Generation functions for Java methods and classes with chained method calls."""

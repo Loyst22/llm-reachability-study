@@ -53,15 +53,15 @@ def random_condition(variables):
     
 def random_method_call(called_method):
     """Generate the next method call using the given method name."""
-    return f"    {called_method}();"
+    return f"\t{called_method}();"
 
 def random_loop():
     """Generate a random for or while loop."""
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
-        return f"    for (int i = 0; i < {random.randint(1, 5)}; i++) {{ {random_method_call('nextMethod')} }}\n"
+        return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t{random_method_call('nextMethod')}\n\t}}"
     else:  # while loop
-        return f"    while (counter < 5) {{ {random_method_call('nextMethod')} counter++; }}\n"
+        return f"\twhile (counter < 5) {{\n\t{random_method_call('nextMethod')}\n\t\tcounter++;\n\t}}"
 
 def generate_method_body(called_method, variables, next_method):
     """Generate a method body with simple control flow, declarations, and method calls."""
@@ -71,12 +71,12 @@ def generate_method_body(called_method, variables, next_method):
     for _ in range(random.randint(1, 3)):  # Random number of variables to declare
         var = random_variable()
         variables.append(var)  # Store the variable for later use in conditions
-        body.append(f"    {var.var_type} {var.name} = {var.value};")
+        body.append(f"\t{var.var_type} {var.name} = {var.value};")
     
     # Add an optional condition check (like an 'if' statement)
     if random.choice([True, False]):  # Decide if we add a condition or not
         condition = random_condition(variables)
-        body.append(f"    if ({condition}) {{ {random_method_call(next_method)} }}")
+        body.append(f"\tif ({condition}) {{\n\t{random_method_call(next_method)}\n\t}}")
     
     # Add an optional loop (either a for loop or a while loop)
     if random.choice([True, False]):

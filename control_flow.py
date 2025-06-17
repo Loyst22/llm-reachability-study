@@ -10,11 +10,11 @@ def random_declaration():
     var_type = random.choice(["int", "boolean", "double"])
     var_name = random_variable()
     if var_type == "int":
-        return f"    int {var_name} = {random.randint(1, 10)};"
+        return f"\tint {var_name} = {random.randint(1, 10)};"
     elif var_type == "boolean":
-        return f"    boolean {var_name} = {random.choice([True, False])};"
+        return f"\tboolean {var_name} = {random.choice([True, False])};"
     else:  # double
-        return f"    double {var_name} = {random.uniform(1.0, 10.0)};"
+        return f"\tdouble {var_name} = {random.uniform(1.0, 10.0)};"
 
 def random_condition():
     """Generate a simple condition involving declared variables."""
@@ -23,15 +23,15 @@ def random_condition():
 
 def random_method_call(called_method):
     """Generate the next method call."""
-    return f"    {called_method}();"
+    return f"{called_method}();"
 
 def random_loop():
     """Generate a random for or while loop."""
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
-        return f"    for (int i = 0; i < {random.randint(1, 5)}; i++) {{ {random_method_call('methodTwo')} }}\n"
+        return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{ \n\t\t{random_method_call('methodTwo')}\n\t}}"
     else:  # while loop
-        return f"    while (counter < 5) {{ {random_method_call('methodThree')} counter++; }}\n"
+        return f"\twhile (counter < 5) {{ \n\t\t{random_method_call('methodThree')} \n\t\tcounter++; \n\t}}"
 
 def generate_method_body(called_method):
     """Generate a method body with simple control flow, declarations, and method calls."""
@@ -44,14 +44,14 @@ def generate_method_body(called_method):
     # Add an optional condition check (like an 'if' statement)
     if random.choice([True, False]):  # Decide if we add a condition or not
         condition = random_condition()
-        body.append(f"    if ({condition}) {{ {random_method_call(called_method)} }}")
+        body.append(f"\tif ({condition}) {{\n\t\t{random_method_call(called_method)} \n\t}}")
     
     # Add an optional loop (either a for loop or a while loop)
     if random.choice([True, False]):
         body.append(random_loop())
     
     # Add the actual method call (to the next method in the chain)
-    body.append(f"    {called_method}();")
+    body.append(f"\t{called_method}();")
     
     return "\n".join(body)
 

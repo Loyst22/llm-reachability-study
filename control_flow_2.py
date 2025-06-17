@@ -1,4 +1,6 @@
 import random
+import generate_chain
+
 # restructure to pass a function to generate bodies to generate_chain
 # import generate_chain
 
@@ -61,9 +63,9 @@ def random_loop():
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
         #return f"    for (int i = 0; i < {random.randint(1, 5)}; i++) {{ {random_method_call('methodTwo')} }}\n"
-        return f"    for (int i = 0; i < {random.randint(1, 5)}; i++) {{ int blah = i; }}\n"
+        return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t\tint blah = i;\n\t}}"
     else:  # while loop
-        return f"    while (counter < 5) {{ counter++; }}\n"
+        return f"\twhile (counter < 5) {{\n\t\tcounter++;\n\t}}"
 
 def generate_method_body(called_method, n_vars):
     """Generate a method body with simple control flow, declarations, and method calls."""
@@ -74,15 +76,15 @@ def generate_method_body(called_method, n_vars):
     for _ in range(n_vars):  # Random number of variables to declare
         var = random_variable()
         variables.append(var)  # Store the variable for later use in conditions
-        body.append(f"    {var.var_type} {var.name} = {var.value};")
+        body.append(f"\t{var.var_type} {var.name} = {var.value};")
     
     # Add an optional condition check (like an 'if' statement)
     if random.choice([True, False]):  # Decide if we add a condition or not
         condition = random_condition(variables)
-        body.append(f"    if ({condition}) {{ {random_method_call(called_method)} }}")
+        body.append(f"\tif ({condition}) {{\n\t{random_method_call(called_method)} \n\t}}")
     else: 
         body.append(random_loop())
-        body.append(f"    {called_method}();")
+        body.append(f"\t{called_method}();")
     # commenting out extra complexity, add back later
     # Add an optional loop (either a for loop or a while loop)
     #if random.choice([True, False]):
@@ -93,8 +95,8 @@ def generate_method_body(called_method, n_vars):
     
     return "\n".join(body)
 
-def generate_method(caller, callee, nvars):
-    body = generate_method_body(callee, nvars)
+def generate_method(caller, called, nvars):
+    body = generate_method_body(called, nvars)
     return f"public void {caller}() {{\n{body}\n}}"
 
 def generate_method_bodies(method_names):
@@ -105,7 +107,9 @@ def generate_method_bodies(method_names):
     for i, method_name in enumerate(method_names):
         # Each method calls the next one in the list, or wraps around to the first
         called_method = method_names[(i + 1) % len(method_names)]
-        body = generate_method_body(called_method, variables)
+        # ! weird 
+        # body = generate_method_body(called_method, variables)
+        body = generate_method_body(called_method, 3) 
         bodies.append(f"public void {method_name}() {{\n{body}\n}}")
     
     return bodies
@@ -132,10 +136,10 @@ def generate_chained_method_calls(method_names):
     return method_bodies
 
 # Example usage
-#method_names = generate_chain.generate_unique_method_names(15)
-#method_bodies = generate_method_bodies(method_names)
+method_names = generate_chain.generate_unique_method_names(15)
+method_bodies = generate_method_bodies(method_names)
 
 # Print the generated method bodies
-#for body in method_bodies:
-#    print(body)
-#    print()
+for body in method_bodies:
+   print(body)
+   print()
