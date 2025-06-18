@@ -1,5 +1,4 @@
 import random
-import string
 from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
@@ -227,7 +226,7 @@ class QuestionGenerator:
         num_methods = len(method_names)
         
         # Language-specific terminology
-        call_term = "call" if language == "fortran" else "call"
+        call_term = "call" # if language == "fortran" else "call"
         if language == "java":
             method_term = "method"
         elif language == "cpp":

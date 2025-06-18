@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from linear_call_experiment import LinearCallExperiment
-from tree_call_experiment import TreeCallExperiment
+from experiment import LinearCallExperiment
+from experiment import TreeCallExperiment
 
 class ExperimentGUI:
     def __init__(self, root):

@@ -1,12 +1,11 @@
 import random
-import string
 from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Tuple, Callable, Optional, Dict
+from typing import List, Tuple, Callable
 from abc import ABC, abstractmethod
 import prompts as p
-# import control_flow_3
+import control_flow
 import comments_generation as comments_generation
 
 
@@ -19,8 +18,27 @@ class ExperimentConfig:
     n_questions: int
     n_padding: int = 0
     n_comment_lines: int = 0
+    n_vars: int = 0
+    n_loops: int = 0
+    n_if: int = 0
     time_limit: str = "1:00:00"
     language: str = "java"  # Added language parameter
+    type: str = "linear"
+
+@dataclass
+class LinearCallExperimentConfig(ExperimentConfig):
+    pass
+@dataclass
+class TreeCallExperienceConfig(ExperimentConfig):
+    tree_depth: int = 3
+    n_tree: int = 3
+    calls_per_function: int = 2
+    type: str = "tree"
+    
+    @property
+    def n_method(self) -> int:
+        """Calcul automatique du nombre de méthodes d'un arbre"""
+        return self.n_tree * (self.calls_per_function**(self.tree_depth+1) - 1) // (self.calls_per_function - 1)
 
 
 class MethodNameGenerator:
@@ -101,8 +119,39 @@ class LanguageGenerator(ABC):
     def get_method_name_style(self) -> str:
         """Get the method naming style for this language"""
         pass
+    
+    @staticmethod
+    def chain_generator(method_names: list, config: ExperimentConfig) -> list:
+        """Generates a list of method bodies with respect to the config"""
+        # Just an alias for the moment since control works only for java
+        if config.language != "java":
+            return comments_generation.generate_chained_method_calls(method_names, config.n_comment_lines)
+        
+        method_bodies = []
+        
+        # Loop through the list of method names
+        for i, method in enumerate(method_names):
+            # Generate comments for this method if necessary
+            comment = comments_generation.generate_lorem_ipsum_comments(config.n_comment_lines, config.language)
 
-
+            if i < len(method_names) - 1:
+                # Generate content of the method body with control flow if necessary
+                method_body = control_flow.generate_method(caller_method=method,
+                                                            called_method=method_names[i+1],
+                                                            n_vars=config.n_vars,
+                                                            n_loops=config.n_loops,
+                                                            n_if=config.n_if)
+            else:
+                method_body = control_flow.generate_method(caller_method=method,
+                                                           called_method=None,
+                                                           n_vars=config.n_vars,
+                                                           n_loops=config.n_loops,
+                                                           n_if=config.n_if)
+            
+            method_bodies.append(f"{comment}\n{method_body}")
+            
+        return method_bodies
+            
 class JavaGenerator(LanguageGenerator):
     """Java-specific code generator"""
     
@@ -359,13 +408,10 @@ class QuestionGenerator:
         elif language in ["cpp", "c++"]:
             call_term = "call"
             method_term = "function"
-        elif language in ["ruby", "rb"]:
+        elif language in ["ruby", "rb", "php", "java"]:
             call_term = "call"
             method_term = "method"
-        elif language == "php":
-            call_term = "call"
-            method_term = "method"
-        else:  # java and others
+        else:  # others
             call_term = "call"
             method_term = "method"
 
@@ -516,40 +562,45 @@ class ExperimentRunner:
             count_dict[item[1]] += 1
         return count_dict
 
-    def generate_single_context(self, directory: Path, context_size: int, n_chains: int, 
-                               chain_size: int, depths: List[int], n_questions: int, 
-                               chain_generator: Callable, language: str = "java") -> None:
+    def generate_single_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
+                               chain_generator: Callable, config: LinearCallExperimentConfig) -> None:
         """Generate a single context with specified parameters"""
-        print(f"Generating {language} class with {context_size} methods, {n_chains} chains")
-        print(f"Questions per depth: {n_questions}, expected total: {n_questions * len(depths)}")
+        print(f"Generating {config.language} class with {config.context_size} methods, {n_chains} chains")
+        print(f"Questions per depth: {n_questions}, expected total: {n_questions * len(config.depths)}")
 
         # Get language-specific generator
-        lang_generator = LanguageFactory.get_generator(language)
+        lang_generator = LanguageFactory.get_generator(config.language)
         
         # Generate method names with appropriate naming style
         method_names = self.method_generator.generate_unique_method_names(
-            context_size, lang_generator.get_method_name_style()
+            config.context_size, 
+            lang_generator.get_method_name_style()
         )
+        
+        # Subdivide the list of method names into chains of methods
         all_chains = self.divide_list_into_chunks(method_names, chain_size)
         
         print(f"Actual number of chains: {len(all_chains)}")
         
         # Generate the class/module
         the_class = lang_generator.generate_class_with_multiple_chains(
-            "TheClass", all_chains, chain_generator
+            "TheClass",
+            all_chains,
+            chain_generator
         )
         
         # Generate questions for all chains
         all_questions = []
         for chain_names in all_chains:
             questions = self.question_generator.generate_call_questions_with_distances_and_chains(
-                chain_names, language
+                chain_names,
+                config.language
             )
             all_questions.extend(questions)
         
         # Select questions for each depth
         selection = []
-        for depth in depths:
+        for depth in config.depths:
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, depth, n_questions))
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, -depth, n_questions))
         
@@ -568,10 +619,22 @@ class ExperimentRunner:
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
 
     def generate_experiment(self, config: ExperimentConfig) -> List[Path]:
-        """Generate a complete experiment based on configuration"""
+        """Generate an experiment based on configuration (and its type)"""
+        if config.type == "linear":
+            return self.generate_linear_experiment(config)
+        elif config.type == "tree":
+            return self.generate_tree_experiment(config)
+        else: 
+            raise ValueError(f"Unknow experiment type: {config.type}")
+        
+    
+    def generate_linear_experiment(self, config: LinearCallExperimentConfig):
+        """Generate a complete linear-chain experiment based on configuration"""
+        
         chain_size = max(config.depths) + config.n_padding
         n_methods_needed = chain_size * config.n_questions
         
+        print()
         print(f"Methods needed: {n_methods_needed}")
         print(f"Language: {config.language}")
         
@@ -598,18 +661,21 @@ class ExperimentRunner:
             
             # first claude fix, disregarded and overlooking all the architectural stuff :-)
             # chain_generator = lang_generator.generate_chained_method_calls
-            chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
-
             
-            self.generate_single_context(
-                exp_dir, config.context_size, n_chains_in_context, 
-                chain_size, config.depths, n_qs, chain_generator, config.language
-            )
+            # TODO modify this
+            # chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
+            chain_generator = lambda c: LanguageGenerator.chain_generator(method_names=c, config=config)
+            
+            self.generate_single_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
             
             directories.append(exp_dir)
             n_questions_left -= n_chains_in_context
         
         return directories
+    
+    def generate_tree_experiment(self, config: TreeCallExperienceConfig):
+        # TODO !! 
+        pass
 
     @staticmethod
     def _format_depths(depths: List[int]) -> str:
@@ -618,18 +684,18 @@ class ExperimentRunner:
             return f"{depths[0]}--{depths[-1]}"
         return "_".join(str(d) for d in depths)
 
-    def generate_batch_experiments(self, context_ranges: List[int], n_comments: int, 
-                                 language: str = "java") -> None:
+    def generate_batch_experiments(self, context_ranges: List[int], n_comments: int, language: str = "java", experiment_type: str = "linear") -> None:
         """Generate multiple experiments for different context sizes"""
         for context_size in context_ranges:
             config = ExperimentConfig(
-                name=f'xps/{language}/context_{context_size}_comments_{n_comments}',
+                name=f'experiments/{language}/context_{context_size}_comments_{n_comments}',
                 context_size=context_size,
                 depths=list(range(1, 11)),
                 n_questions=200,
                 n_padding=0,
                 n_comment_lines=n_comments,
-                language=language
+                language=language,
+                type=experiment_type
             )
             
             self.generate_experiment(config)
@@ -642,18 +708,23 @@ class ExperimentRunner:
     def generate_all_experiments(self, languages: List[str] = ["java"]) -> None:
         """Generate all predefined experiments for specified languages"""
         experiment_configs = [
-           # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
-           # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
-           # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4),
+            # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
+            # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
+            # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4),
             ([50, 75, 100, 150, 200, 250, 300, 350], 7),
-           # ([50, 75, 100, 150, 200], 12),
-           # ([100], 24)
+            # ([50, 75, 100, 150, 200], 12),
+            # ([100], 24)
         ]
         
-        for language in languages:
-            print(f"\n=== Generating experiments for {language.upper()} ===")
-            for context_ranges, n_comments in experiment_configs:
-                self.generate_batch_experiments(context_ranges, n_comments, language)
+        for type in ["linear", "tree"]:
+            print(f"\n=== Generating {type} experiments ===")
+            for language in languages:
+                print(f"\n=== Generating experiments for {language.upper()} ===")
+                for context_ranges, n_comments in experiment_configs:
+                    self.generate_batch_experiments(context_ranges=context_ranges,
+                                                    n_comments=n_comments,
+                                                    language=language,
+                                                    experiment_type=type)
 
 
 # Backward compatibility - keep the original JavaMethodGenerator for existing code
@@ -670,20 +741,24 @@ if __name__ == "__main__":
     print(f"Supported languages: {supported_languages}")
     
     # Generate experiments for Java, C++, Fortran, Pascal, Ruby, and PHP
-    runner.generate_all_experiments(["java", "cpp", "fortran", "pascal", "ruby", "php"])
-    #runner.generate_all_experiments(["cpp", "fortran"])
+    # runner.generate_all_experiments(["java", "cpp", "fortran", "pascal", "ruby", "php"])
+    # runner.generate_all_experiments(["cpp", "fortran"])
 
     # Or generate for a single language
     # runner.generate_all_experiments(["java"])
     
     # Example of generating a single experiment with custom config
     custom_config = ExperimentConfig(
-        name="custom_cpp_experiment",
+        name="custom_java_experiment",
         context_size=100,
         depths=[1, 2, 3],
         n_questions=50,
         n_comment_lines=2,
-        language="cpp"
+        n_vars=1,
+        n_loops=1,
+        n_if=1,
+        language="java",
+        type="linear"
     )
-    # runner.generate_experiment(custom_config)
+    runner.generate_experiment(custom_config)
 

@@ -1,5 +1,5 @@
-from linear_call_experiment import LinearCallExperiment
-from tree_call_experiment import TreeCallExperiment
+from experiment import LinearCallExperiment
+from experiment import TreeCallExperiment
 
 def prompt_experiment_type():
     print("Quel type d'experience voulez-vous creer ?")
