@@ -361,20 +361,20 @@ def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n
         n_questions_left -= n_chains_in_context
     return dirs
 
+def write_exps(context_ranges, n_comments):
+    """Generate experiments for different context sizes and number of comments."""
+    for context_size in context_ranges:
+        depth_ranges = range(1,11) #1 to 10
+        n_questions = 200
+        n_padding = 0
+        name = f'context_{context_size}_comments_{n_comments}' 
+        exp_path = f'xps/{name}'
+        generate_all(exp_path, context_size, depth_ranges, n_questions, n_padding, n_comments)
+        write_slurm(name, exp_path, '1:00:00')
 
 def generate_really_all():
     """ Generate a set of experiments with different context sizes and number of comments.
     """
-    def write_exps(context_ranges, n_comments):
-        """Generate experiments for different context sizes and number of comments."""
-        for context_size in context_ranges:
-            depth_ranges = range(1,11) #1 to 10
-            n_questions = 200
-            n_padding = 0
-            name = f'context_{context_size}_comments_{n_comments}' 
-            exp_path = f'xps/{name}'
-            generate_all(exp_path, context_size, depth_ranges, n_questions, n_padding, n_comments)
-            write_slurm(name, exp_path, '1:00:00')
 
     ranges_0_2 = [50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000]
     ranges_4 = [50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500]

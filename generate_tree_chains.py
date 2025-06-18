@@ -331,4 +331,4 @@ def write_chains_to_file(questions:list, filename:str):
 # Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
 # generate_exp(exp_name="tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
 # Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
-generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)
+# generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)

@@ -123,7 +123,7 @@ def generate_method_bodies(method_names: list) -> list:
     return bodies
 
 
-def generate_full_class(nb_methods: int=15, nb_loops: int=None, nb_if: int=None, nb_chains: int=1):
+def generate_full_class(nb_methods: int=15, n_loops: int=None, n_if: int=None, nb_chains: int=1):
     method_names = generate_chain.generate_unique_method_names(nb_methods)
     method_bodies = generate_method_bodies(method_names)
     
