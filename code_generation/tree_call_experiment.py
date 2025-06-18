@@ -16,6 +16,8 @@ class TreeCallExperiment(Experiment):
         self.branching_factor = branching_factor
         self.n_methods = self._calculate_n_methods()
         self.calls_per_function = branching_factor
+        
+        self._setup_experiment_dir()
 
     def _calculate_n_methods(self):
         # TODO

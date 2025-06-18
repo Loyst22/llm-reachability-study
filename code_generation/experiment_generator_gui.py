@@ -15,7 +15,6 @@ class ExperimentGUI:
         self.fields = {
             "common": [
                 ("Name", "name"),
-                ("Experiment folder", "exp_dir"),
                 ("Questions/distance", "n_questions_per_distance"),
                 ("Comments", "n_comments"),
                 ("Loops", "n_loops"),
@@ -80,7 +79,6 @@ class ExperimentGUI:
             kind = self.type_var.get()
             kwargs = {
                 "name": self.entries["name"].get(),
-                "exp_dir": self.entries["exp_dir"].get(),
                 "n_questions_per_distance": int(self.entries["n_questions_per_distance"].get() or 10),
                 "n_comments": int(self.entries["n_comments"].get() or 0),
                 "n_loops": int(self.entries["n_loops"].get() or 0),

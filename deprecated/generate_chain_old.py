@@ -1,6 +1,6 @@
 import random
 import string
-import prompts as p
+import code_generation.prompts as p
 from pathlib import Path
 
 

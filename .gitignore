@@ -4,6 +4,7 @@ __pycache__
 a_faire.txt
 
 # Ignore generated files
+experiments
 xps
 small-ext
 smallish-ext
@@ -39,5 +40,3 @@ huge-flow
 tree_exp
 tree_exp_2
 large_tree_exp
-
-Test

@@ -1,8 +1,11 @@
+import os
 import random
 import prompts as p
 from pathlib import Path
 from collections import defaultdict
-import big_comments
+import comments_generation as comments
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 """  Generation functions for Java methods and classes with chained method calls."""
 
@@ -105,7 +108,7 @@ def generate_class_with_multiple_chains(class_name:str, chains:list, chain_gener
     # Generate the chain of method calls
     method_bodies = []
     for c in chains:
-        #method_bodies.append(big_comments.generate_chained_method_calls(c))
+        #method_bodies.append(comments.generate_chained_method_calls(c))
         method_bodies.append(chain_generator(c))
 
     method_bodies = flatten_list(method_bodies)
@@ -319,7 +322,7 @@ def generate_call_questions_with_distances_and_chains_new(method_names:list):
     return questions_with_distances_and_chains
 
 def method_generator(c):
-    big_comments.generate_chained_method_calls(c)
+    comments.generate_chained_method_calls(c)
 
 def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n_pad:int, n_comment_lines=0):
     """Generate a set of Java classes with chained method calls and questions about reachability.
@@ -341,7 +344,9 @@ def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n
     print("number of methods needed: ", n_methods_needed)
     n_chains_in_context = context_size // chain_size
     n_questions_left = n_questions
-    dir = Path(exp_name)
+    exp_dir = os.path.join(BASE_DIR, "..", "experiments")
+    path_name = os.path.join(exp_dir, exp_name)
+    dir = Path(path_name)
     dirs = []
     while n_questions_left > 0:
         depth_str = f"{depths[0]}--{depths[-1]}" if len(depths) > 8 else "_".join(str(num) for num in depths)
@@ -355,7 +360,7 @@ def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n
         n_qs = n_chains_in_context if n_chains_in_context < n_questions_left else n_questions_left
         print("generate a context size of ", context_size, " for ", n_qs * len(depths), " questions, with ", n_chains_in_context, " chains")
         print("in: ", exp_dir)
-        chain_generator = lambda c: big_comments.generate_chained_method_calls(c, n_comment_lines)
+        chain_generator = lambda c: comments.generate_chained_method_calls(c, n_comment_lines)
         generate_class_new(exp_dir, context_size, n_chains_in_context, chain_size,  depths, n_qs, chain_generator) # + chain_size + exp name
         dirs.append(exp_dir)
         n_questions_left -= n_chains_in_context

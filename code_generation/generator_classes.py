@@ -3,11 +3,10 @@ import string
 from pathlib import Path
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Tuple, Callable, Optional, Dict
-from abc import ABC, abstractmethod
+from typing import List, Tuple, Callable, Optional
 import prompts as p
-import control_flow_2
-import big_comments
+# import control_flow_2
+import comments_generation as comments
 
 
 @dataclass
@@ -20,11 +19,10 @@ class ExperimentConfig:
     n_padding: int = 0
     n_comment_lines: int = 0
     time_limit: str = "1:00:00"
-    language: str = "java"  # Added language parameter
 
 
-class MethodNameGenerator:
-    """Base class for generating method/function names"""
+class JavaMethodGenerator:
+    """Generates random Java method names and related functionality"""
     
     PREFIXES = [
         "get", "set", "is", "calculate", "process", "fetch", "update", "create", "delete", 
@@ -54,193 +52,37 @@ class MethodNameGenerator:
     ]
 
     @classmethod
-    def generate_method_name(cls, style: str = "camelCase") -> str:
-        """Generate a single random method name in specified style"""
+    def generate_method_name(cls) -> str:
+        """Generate a single random Java method name"""
         prefix = random.choice(cls.PREFIXES)
         verb = random.choice(cls.VERBS)
         noun = random.choice(cls.NOUNS)
-        
-        if style == "camelCase":
-            return f"{prefix}{verb}{noun}"
-        elif style == "snake_case":
-            return f"{prefix}_{verb}_{noun}".lower()
-        elif style == "PascalCase":
-            return f"{prefix.capitalize()}{verb}{noun}"
-        else:
-            return f"{prefix}{verb}{noun}"
+        return f"{prefix}{verb}{noun}"
 
     @classmethod
-    def generate_unique_method_names(cls, n: int, style: str = "camelCase") -> List[str]:
+    def generate_unique_method_names(cls, n: int) -> List[str]:
         """Generate n unique method names"""
         unique_names = set()
         while len(unique_names) < n:
-            unique_names.add(cls.generate_method_name(style))
+            unique_names.add(cls.generate_method_name())
         return list(unique_names)
-
-
-class LanguageGenerator(ABC):
-    """Abstract base class for language-specific code generators"""
-    
-    @abstractmethod
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained method calls for the specific language"""
-        pass
-    
-    @abstractmethod
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a class/module with multiple method chains"""
-        pass
-    
-    @abstractmethod
-    def get_file_extension(self) -> str:
-        """Get the file extension for this language"""
-        pass
-    
-    @abstractmethod
-    def get_method_name_style(self) -> str:
-        """Get the method naming style for this language"""
-        pass
-
-
-class JavaGenerator(LanguageGenerator):
-    """Java-specific code generator"""
-    
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained method calls for Java"""
-        method_bodies = []
-        for i, method in enumerate(method_names):
-            if i < len(method_names) - 1:
-                next_method = method_names[i + 1]
-                method_body = f"    public void {method}() {{\n        {next_method}();\n    }}"
-            else:
-                method_body = f"    public void {method}() {{\n        // End of chain\n    }}"
-            method_bodies.append(method_body)
-        return method_bodies
-
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a Java class with multiple method chains"""
-        method_bodies = []
-        for chain in chains:
-            method_bodies.extend(chain_generator(chain))
-        
-        random.shuffle(method_bodies)
-        
-        class_body = f"public class {class_name} {{\n"
-        class_body += "\n\n".join(method_bodies)
-        class_body += "\n}"
-        
-        return class_body
-    
-    def get_file_extension(self) -> str:
-        return ".java"
-    
-    def get_method_name_style(self) -> str:
-        return "camelCase"
-
-
-class CppGenerator(LanguageGenerator):
-    """C++ specific code generator"""
-    
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained method calls for C++"""
-        method_bodies = []
-        for i, method in enumerate(method_names):
-            if i < len(method_names) - 1:
-                next_method = method_names[i + 1]
-                method_body = f"    void {method}() {{\n        {next_method}();\n    }}"
-            else:
-                method_body = f"    void {method}() {{\n        // End of chain\n    }}"
-            method_bodies.append(method_body)
-        return method_bodies
-
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a C++ class with multiple method chains"""
-        method_bodies = []
-        for chain in chains:
-            method_bodies.extend(chain_generator(chain))
-        
-        random.shuffle(method_bodies)
-        
-        # Generate header section
-        class_body = f"#include <iostream>\n\nclass {class_name} {{\npublic:\n"
-        class_body += "\n\n".join(method_bodies)
-        class_body += "\n};"
-        
-        return class_body
-    
-    def get_file_extension(self) -> str:
-        return ".cpp"
-    
-    def get_method_name_style(self) -> str:
-        return "camelCase"
-
-
-class FortranGenerator(LanguageGenerator):
-    """Fortran specific code generator"""
-    
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained subroutine calls for Fortran"""
-        method_bodies = []
-        for i, method in enumerate(method_names):
-            if i < len(method_names) - 1:
-                next_method = method_names[i + 1]
-                method_body = f"    subroutine {method}()\n        call {next_method}()\n    end subroutine {method}"
-            else:
-                method_body = f"    subroutine {method}()\n        ! End of chain\n    end subroutine {method}"
-            method_bodies.append(method_body)
-        return method_bodies
-
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a Fortran module with multiple subroutine chains"""
-        method_bodies = []
-        for chain in chains:
-            method_bodies.extend(chain_generator(chain))
-        
-        random.shuffle(method_bodies)
-        
-        # Generate Fortran module
-        class_body = f"module {class_name.lower()}\n    implicit none\n\ncontains\n\n"
-        class_body += "\n\n".join(method_bodies)
-        class_body += f"\n\nend module {class_name.lower()}"
-        
-        return class_body
-    
-    def get_file_extension(self) -> str:
-        return ".f90"
-    
-    def get_method_name_style(self) -> str:
-        return "snake_case"
 
 
 class QuestionGenerator:
     """Generates reachability questions for method chains"""
     
     @staticmethod
-    def generate_call_questions_with_distances_and_chains(method_names: List[str], 
-                                                        language: str = "java") -> List[Tuple]:
+    def generate_call_questions_with_distances_and_chains(method_names: List[str]) -> List[Tuple]:
         """Generate questions, distances, and chains for all pairs of methods"""
         questions_with_distances_and_chains = []
         num_methods = len(method_names)
-        
-        # Language-specific terminology
-        call_term = "call" if language == "fortran" else "call"
-        if language == "java":
-            method_term = "method"
-        elif language == "cpp":
-            method_term = "function"
-        else:  # fortran
-            method_term = "subroutine"
 
         for i in range(num_methods):
             for j in range(num_methods):
                 if i != j:
                     question = (
-                        f"Does `{method_names[i]}` {call_term} `{method_names[j]}`, either directly or indirectly? "
-                        f"Think step-by-step by following the {method_term} calls from `{method_names[i]}.`"
+                        f"Does `{method_names[i]}` call `{method_names[j]}`, either directly or indirectly? "
+                        f"Think step-by-step by following the method calls from `{method_names[i]}.`"
                     )
 
                     if i < j:
@@ -326,38 +168,47 @@ python run_experiment.py {path}"""
             f.write(contents)
 
 
-class LanguageFactory:
-    """Factory class for creating language-specific generators"""
+class JavaClassGenerator:
+    """Generates Java classes with method chains"""
     
-    _generators = {
-        "java": JavaGenerator,
-        "cpp": CppGenerator,
-        "c++": CppGenerator,
-        "fortran": FortranGenerator,
-        "f90": FortranGenerator
-    }
-    
-    @classmethod
-    def get_generator(cls, language: str) -> LanguageGenerator:
-        """Get a language generator instance"""
-        language = language.lower()
-        if language not in cls._generators:
-            raise ValueError(f"Unsupported language: {language}. Supported languages: {list(cls._generators.keys())}")
-        return cls._generators[language]()
-    
-    @classmethod
-    def get_supported_languages(cls) -> List[str]:
-        """Get list of supported languages"""
-        return list(cls._generators.keys())
+    @staticmethod
+    def generate_chained_method_calls(method_names: List[str]) -> List[str]:
+        """Generate chained method calls"""
+        method_bodies = []
+        for i, method in enumerate(method_names):
+            if i < len(method_names) - 1:
+                next_method = method_names[i + 1]
+                method_body = f"public void {method}() {{\n    {next_method}();\n}}"
+            else:
+                method_body = f"public void {method}() {{\n    // End of chain\n}}"
+            method_bodies.append(method_body)
+        return method_bodies
+
+    @staticmethod
+    def generate_class_with_multiple_chains(class_name: str, chains: List[List[str]], 
+                                          chain_generator: Callable) -> str:
+        """Generate a class with multiple method chains"""
+        method_bodies = []
+        for chain in chains:
+            method_bodies.extend(chain_generator(chain))
+        
+        random.shuffle(method_bodies)
+        
+        class_body = f"public class {class_name} {{\n"
+        class_body += "\n\n".join(method_bodies)
+        class_body += "\n}"
+        
+        return class_body
 
 
 class ExperimentRunner:
     """Main class for running experiments"""
     
     def __init__(self):
-        self.method_generator = MethodNameGenerator()
+        self.method_generator = JavaMethodGenerator()
         self.question_generator = QuestionGenerator()
         self.file_writer = FileWriter()
+        self.class_generator = JavaClassGenerator()
 
     @staticmethod
     def divide_list_into_chunks(lst: List, chunk_size: int) -> List[List]:
@@ -379,33 +230,26 @@ class ExperimentRunner:
 
     def generate_single_context(self, directory: Path, context_size: int, n_chains: int, 
                                chain_size: int, depths: List[int], n_questions: int, 
-                               chain_generator: Callable, language: str = "java") -> None:
+                               chain_generator: Callable) -> None:
         """Generate a single context with specified parameters"""
-        print(f"Generating {language} class with {context_size} methods, {n_chains} chains")
+        print(f"Generating class with {context_size} methods, {n_chains} chains")
         print(f"Questions per depth: {n_questions}, expected total: {n_questions * len(depths)}")
 
-        # Get language-specific generator
-        lang_generator = LanguageFactory.get_generator(language)
-        
-        # Generate method names with appropriate naming style
-        method_names = self.method_generator.generate_unique_method_names(
-            context_size, lang_generator.get_method_name_style()
-        )
+        # Generate method names and organize into chains
+        method_names = self.method_generator.generate_unique_method_names(context_size)
         all_chains = self.divide_list_into_chunks(method_names, chain_size)
         
         print(f"Actual number of chains: {len(all_chains)}")
         
-        # Generate the class/module
-        the_class = lang_generator.generate_class_with_multiple_chains(
+        # Generate the class
+        the_class = self.class_generator.generate_class_with_multiple_chains(
             "TheClass", all_chains, chain_generator
         )
         
         # Generate questions for all chains
         all_questions = []
         for chain_names in all_chains:
-            questions = self.question_generator.generate_call_questions_with_distances_and_chains(
-                chain_names, language
-            )
+            questions = self.question_generator.generate_call_questions_with_distances_and_chains(chain_names)
             all_questions.extend(questions)
         
         # Select questions for each depth
@@ -419,10 +263,7 @@ class ExperimentRunner:
 
         # Write all files
         directory.mkdir(parents=True, exist_ok=True)
-        
-        # Use language-specific file extension
-        class_filename = f"TheClass{lang_generator.get_file_extension()}"
-        self.file_writer.write_class_to_file(the_class, directory / class_filename)
+        self.file_writer.write_class_to_file(the_class, directory / "TheClass.java")
         self.file_writer.write_prompt_to_file(p.in_context, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt")
@@ -434,7 +275,6 @@ class ExperimentRunner:
         n_methods_needed = chain_size * config.n_questions
         
         print(f"Methods needed: {n_methods_needed}")
-        print(f"Language: {config.language}")
         
         n_chains_in_context = config.context_size // chain_size
         n_questions_left = config.n_questions
@@ -447,19 +287,17 @@ class ExperimentRunner:
             q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
             q_end = (config.n_questions - n_questions_left + n_chains_in_context) * len(config.depths) * 2
             
-            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_qs_{q_start}--{q_end}_{config.language}"
+            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_qs_{q_start}--{q_end}"
             
             n_qs = min(n_chains_in_context, n_questions_left)
             print(f"Generating context size {config.context_size} for {n_qs * len(config.depths)} questions")
             print(f"Output directory: {exp_dir}")
             
-            # Use language-specific chain generator
-            lang_generator = LanguageFactory.get_generator(config.language)
-            chain_generator = lambda c: big_comments.generate_chained_method_calls(c, config.n_comment_lines)
+            chain_generator = lambda c: comments.generate_chained_method_calls(c, config.n_comment_lines)
             
             self.generate_single_context(
                 exp_dir, config.context_size, n_chains_in_context, 
-                chain_size, config.depths, n_qs, chain_generator, config.language
+                chain_size, config.depths, n_qs, chain_generator
             )
             
             directories.append(exp_dir)
@@ -474,29 +312,27 @@ class ExperimentRunner:
             return f"{depths[0]}--{depths[-1]}"
         return "_".join(str(d) for d in depths)
 
-    def generate_batch_experiments(self, context_ranges: List[int], n_comments: int, 
-                                 language: str = "java") -> None:
+    def generate_batch_experiments(self, context_ranges: List[int], n_comments: int) -> None:
         """Generate multiple experiments for different context sizes"""
         for context_size in context_ranges:
             config = ExperimentConfig(
-                name=f'xps/{language}/context_{context_size}_comments_{n_comments}',
+                name=f'xps/context_{context_size}_comments_{n_comments}',
                 context_size=context_size,
                 depths=list(range(1, 11)),
                 n_questions=200,
                 n_padding=0,
-                n_comment_lines=n_comments,
-                language=language
+                n_comment_lines=n_comments
             )
             
             self.generate_experiment(config)
             self.file_writer.write_slurm_script(
-                f'{language}_context_{context_size}_comments_{n_comments}',
+                f'context_{context_size}_comments_{n_comments}',
                 config.name,
                 config.time_limit
             )
 
-    def generate_all_experiments(self, languages: List[str] = ["java"]) -> None:
-        """Generate all predefined experiments for specified languages"""
+    def generate_all_experiments(self) -> None:
+        """Generate all predefined experiments"""
         experiment_configs = [
             ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
             ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
@@ -506,38 +342,11 @@ class ExperimentRunner:
             ([100], 24)
         ]
         
-        for language in languages:
-            print(f"\n=== Generating experiments for {language.upper()} ===")
-            for context_ranges, n_comments in experiment_configs:
-                self.generate_batch_experiments(context_ranges, n_comments, language)
+        for context_ranges, n_comments in experiment_configs:
+            self.generate_batch_experiments(context_ranges, n_comments)
 
 
-# Backward compatibility - keep the original JavaMethodGenerator for existing code
-JavaMethodGenerator = MethodNameGenerator
-JavaClassGenerator = LanguageFactory.get_generator("java")
-
-
-# Usage examples
+# Usage
 if __name__ == "__main__":
     runner = ExperimentRunner()
-    
-    # Generate for all supported languages
-    supported_languages = LanguageFactory.get_supported_languages()
-    print(f"Supported languages: {supported_languages}")
-    
-    # Generate experiments for Java, C++, and Fortran
-    runner.generate_all_experiments(["java", "cpp", "fortran"])
-    
-    # Or generate for a single language
-    # runner.generate_all_experiments(["java"])
-    
-    # Example of generating a single experiment with custom config
-    custom_config = ExperimentConfig(
-        name="custom_cpp_experiment",
-        context_size=100,
-        depths=[1, 2, 3],
-        n_questions=50,
-        n_comment_lines=2,
-        language="cpp"
-    )
-    # runner.generate_experiment(custom_config)
+    runner.generate_all_experiments()

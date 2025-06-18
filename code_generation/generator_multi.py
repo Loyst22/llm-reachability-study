@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import List, Tuple, Callable, Optional, Dict
 from abc import ABC, abstractmethod
 import prompts as p
-import control_flow_2
-import big_comments_claude
+# import control_flow_2
+import comments_generation as comments
 
 
 @dataclass
@@ -216,129 +216,6 @@ class FortranGenerator(LanguageGenerator):
         return "snake_case"
 
 
-class PascalGenerator(LanguageGenerator):
-    """Pascal specific code generator"""
-    
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained procedure calls for Pascal"""
-        method_bodies = []
-        for i, method in enumerate(method_names):
-            if i < len(method_names) - 1:
-                next_method = method_names[i + 1]
-                method_body = f"    procedure {method};\n    begin\n        {next_method};\n    end;"
-            else:
-                method_body = f"    procedure {method};\n    begin\n        // End of chain\n    end;"
-            method_bodies.append(method_body)
-        return method_bodies
-
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a Pascal unit with multiple procedure chains"""
-        method_bodies = []
-        for chain in chains:
-            method_bodies.extend(chain_generator(chain))
-        
-        random.shuffle(method_bodies)
-        
-        # Generate Pascal unit
-        class_body = f"unit {class_name};\n\ninterface\n\ntype\n    T{class_name} = class\n    public\n"
-        
-        # Add procedure declarations
-        for body in method_bodies:
-            # this is wrong when we have some comments!
-            # // comments are ok in pascal, so are { } and (* *) comments
-            proc_name = body.split()[1].rstrip(';')
-            class_body += f"        procedure {proc_name};\n"
-        
-        class_body += "    end;\n\nimplementation\n\n"
-        class_body += "\n\n".join(method_bodies)
-        class_body += "\n\nend."
-        
-        return class_body
-    
-    def get_file_extension(self) -> str:
-        return ".pas"
-    
-    def get_method_name_style(self) -> str:
-        return "PascalCase"
-
-
-class RubyGenerator(LanguageGenerator):
-    """Ruby specific code generator"""
-    
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained method calls for Ruby"""
-        method_bodies = []
-        for i, method in enumerate(method_names):
-            if i < len(method_names) - 1:
-                next_method = method_names[i + 1]
-                method_body = f"  def {method}\n    {next_method}\n  end"
-            else:
-                method_body = f"  def {method}\n    # End of chain\n  end"
-            method_bodies.append(method_body)
-        return method_bodies
-
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a Ruby class with multiple method chains"""
-        method_bodies = []
-        for chain in chains:
-            method_bodies.extend(chain_generator(chain))
-        
-        random.shuffle(method_bodies)
-        
-        # Generate Ruby class
-        class_body = f"class {class_name}\n"
-        class_body += "\n\n".join(method_bodies)
-        class_body += "\nend"
-        
-        return class_body
-    
-    def get_file_extension(self) -> str:
-        return ".rb"
-    
-    def get_method_name_style(self) -> str:
-        return "snake_case"
-
-
-class PhpGenerator(LanguageGenerator):
-    """PHP specific code generator"""
-    
-    def generate_chained_method_calls(self, method_names: List[str]) -> List[str]:
-        """Generate chained method calls for PHP"""
-        method_bodies = []
-        for i, method in enumerate(method_names):
-            if i < len(method_names) - 1:
-                next_method = method_names[i + 1]
-                method_body = f"    public function {method}() {{\n        $this->{next_method}();\n    }}"
-            else:
-                method_body = f"    public function {method}() {{\n        // End of chain\n    }}"
-            method_bodies.append(method_body)
-        return method_bodies
-
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
-        """Generate a PHP class with multiple method chains"""
-        method_bodies = []
-        for chain in chains:
-            method_bodies.extend(chain_generator(chain))
-        
-        random.shuffle(method_bodies)
-        
-        # Generate PHP class
-        class_body = f"<?php\n\nclass {class_name} {{\n"
-        class_body += "\n\n".join(method_bodies)
-        class_body += "\n}\n?>"
-        
-        return class_body
-    
-    def get_file_extension(self) -> str:
-        return ".php"
-    
-    def get_method_name_style(self) -> str:
-        return "camelCase"
-
-
 class QuestionGenerator:
     """Generates reachability questions for method chains"""
     
@@ -350,24 +227,13 @@ class QuestionGenerator:
         num_methods = len(method_names)
         
         # Language-specific terminology
-        if language in ["fortran", "f90"]:
-            call_term = "call"
-            method_term = "subroutine"
-        elif language in ["pascal", "pas"]:
-            call_term = "call"
-            method_term = "procedure"
-        elif language in ["cpp", "c++"]:
-            call_term = "call"
+        call_term = "call" if language == "fortran" else "call"
+        if language == "java":
+            method_term = "method"
+        elif language == "cpp":
             method_term = "function"
-        elif language in ["ruby", "rb"]:
-            call_term = "call"
-            method_term = "method"
-        elif language == "php":
-            call_term = "call"
-            method_term = "method"
-        else:  # java and others
-            call_term = "call"
-            method_term = "method"
+        else:  # fortran
+            method_term = "subroutine"
 
         for i in range(num_methods):
             for j in range(num_methods):
@@ -468,12 +334,7 @@ class LanguageFactory:
         "cpp": CppGenerator,
         "c++": CppGenerator,
         "fortran": FortranGenerator,
-        "f90": FortranGenerator,
-        "pascal": PascalGenerator,
-        "pas": PascalGenerator,
-        "ruby": RubyGenerator,
-        "rb": RubyGenerator,
-        "php": PhpGenerator
+        "f90": FortranGenerator
     }
     
     @classmethod
@@ -594,12 +455,7 @@ class ExperimentRunner:
             
             # Use language-specific chain generator
             lang_generator = LanguageFactory.get_generator(config.language)
-            #chain_generator = lambda c: big_comments.generate_chained_method_calls(c, config.n_comment_lines)
-            
-            # first claude fix, disregarded and overlooking all the architectural stuff :-)
-            # chain_generator = lang_generator.generate_chained_method_calls
-            chain_generator = lambda c: big_comments_claude.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
-
+            chain_generator = lambda c: comments.generate_chained_method_calls(c, config.n_comment_lines)
             
             self.generate_single_context(
                 exp_dir, config.context_size, n_chains_in_context, 
@@ -642,12 +498,12 @@ class ExperimentRunner:
     def generate_all_experiments(self, languages: List[str] = ["java"]) -> None:
         """Generate all predefined experiments for specified languages"""
         experiment_configs = [
-           # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
-           # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
-           # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4),
             ([50, 75, 100, 150, 200, 250, 300, 350], 7),
-           # ([50, 75, 100, 150, 200], 12),
-           # ([100], 24)
+            ([50, 75, 100, 150, 200], 12),
+            ([100], 24)
         ]
         
         for language in languages:
@@ -669,10 +525,9 @@ if __name__ == "__main__":
     supported_languages = LanguageFactory.get_supported_languages()
     print(f"Supported languages: {supported_languages}")
     
-    # Generate experiments for Java, C++, Fortran, Pascal, Ruby, and PHP
-    runner.generate_all_experiments(["java", "cpp", "fortran", "pascal", "ruby", "php"])
-    #runner.generate_all_experiments(["cpp", "fortran"])
-
+    # Generate experiments for Java, C++, and Fortran
+    runner.generate_all_experiments(["java", "cpp", "fortran"])
+    
     # Or generate for a single language
     # runner.generate_all_experiments(["java"])
     
@@ -686,4 +541,3 @@ if __name__ == "__main__":
         language="cpp"
     )
     # runner.generate_experiment(custom_config)
-

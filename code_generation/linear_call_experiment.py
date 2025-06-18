@@ -15,13 +15,15 @@ class LinearCallExperiment(Experiment):
         self.range_of_depth = range_of_depth
         self.n_pad = n_pad
         self.calls_per_function = 1  # par définition
+        
+        self._setup_experiment_dir()
 
     def _metadata_dict(self):
         return {
             "type": "linear",
             "n_methods": self.n_methods,
             "n_pad": self.n_pad,
-            "range_of_depth": self.range_of_depth,
+            "range_of_depth": list(self.range_of_depth),
             "calls_per_function": self.calls_per_function,
             "n_questions_per_distance": self.n_questions_per_distance,
             "n_comments": self.n_comments,

@@ -3,20 +3,18 @@ import json
 from datetime import datetime
 from abc import ABC, abstractmethod
 
-
 class Experiment(ABC):
+    """ Modelise a generic (abstract) experiment """
     def __init__(
         self,
         name,
-        base_dir="./experiments",
         n_questions_per_distance=10,
         n_comments=0,
         n_loops=0,
         n_if=0
     ):
         self.name = name
-        self.base_dir = base_dir
-        self.experiment_path = os.path.join(self.base_dir, self.name)
+        self.experiment_path = os.path.join("experiments", self.name)
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         self.n_questions_per_distance = n_questions_per_distance
@@ -26,6 +24,7 @@ class Experiment(ABC):
 
 
     def _setup_experiment_dir(self):
+        """ Create the directory in which the files are generated and save metadata about the experiment """
         os.makedirs(self.experiment_path, exist_ok=True)
         self._save_metadata()
 

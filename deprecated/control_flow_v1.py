@@ -1,5 +1,5 @@
 import random
-import generate_chain
+import code_generation.generate_chain as generate_chain
 
 """ Random generation functions for control flow in Java methods. """
 

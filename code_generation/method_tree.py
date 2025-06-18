@@ -1,4 +1,5 @@
 from pathlib import Path
+
 class Node:
     def __init__(self, name, left=None, right=None):
         self.name = name      # Name of java method
