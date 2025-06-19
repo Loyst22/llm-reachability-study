@@ -1,12 +1,14 @@
+import os
 import tkinter as tk
 from tkinter import ttk, messagebox
-from experiment import LinearCallExperiment
-from experiment import TreeCallExperiment
+from generator_8lang import ExperimentRunner, ExperimentConfig, LinearCallExperimentConfig, TreeCallExperimentConfig
 
 class ExperimentGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Experiment Launcher")
+
+        self.runner = ExperimentRunner()
 
         self.type_var = tk.StringVar(value="linear")
         self.entries = {}
@@ -15,18 +17,21 @@ class ExperimentGUI:
         self.fields = {
             "common": [
                 ("Name", "name"),
-                ("Questions/distance", "n_questions_per_distance"),
-                ("Comments", "n_comments"),
+                ("Context size", "context_size"),
+                ("Depths (comma-separated)", "depths"),
+                ("Questions/distance", "n_questions"),
+                ("Padding", "n_padding"),
+                ("Comments", "n_comment_lines"),
                 ("Loops", "n_loops"),
                 ("Conditions", "n_if"),
+                ("Variables", "n_vars"),
+                ("Language", "language"),
             ],
-            "linear": [
-                ("Methods", "n_methods"),
-            ],
+            "linear": [],
             "tree": [
-                ("Depth", "depth"),
-                ("Trees", "n_tree"),
-                ("Branching", "branching_factor"),
+                ("Tree Depth", "tree_depth"),
+                ("Number of Trees", "n_tree"),
+                ("Calls per Function", "calls_per_function"),
             ]
         }
 
@@ -36,7 +41,6 @@ class ExperimentGUI:
         frame = ttk.Frame(self.root, padding=10)
         frame.grid(row=0, column=0, sticky="nsew")
 
-        # Radio buttons for experiment type
         ttk.Label(frame, text="Type of experiment:").grid(row=0, column=0, sticky="w")
         ttk.Radiobutton(frame, text="Linear", variable=self.type_var, value="linear", command=self.update_fields).grid(row=1, column=0, sticky="w")
         ttk.Radiobutton(frame, text="Tree", variable=self.type_var, value="tree", command=self.update_fields).grid(row=2, column=0, sticky="w")
@@ -48,7 +52,6 @@ class ExperimentGUI:
         ttk.Button(frame, text="Create Experiment", command=self.create_experiment).grid(row=99, column=0, columnspan=2, pady=10)
 
     def build_fields(self):
-        """Create all fields but hide the ones not needed"""
         row = 0
         for section in ["common", "linear", "tree"]:
             for label_text, key in self.fields[section]:
@@ -63,7 +66,6 @@ class ExperimentGUI:
 
     def update_fields(self):
         kind = self.type_var.get()
-        # Show common fields
         for section in ["common", "linear", "tree"]:
             for _, key in self.fields[section]:
                 label, entry = self.field_widgets[key]
@@ -77,26 +79,68 @@ class ExperimentGUI:
     def create_experiment(self):
         try:
             kind = self.type_var.get()
-            kwargs = {
-                "name": self.entries["name"].get(),
-                "n_questions_per_distance": int(self.entries["n_questions_per_distance"].get() or 10),
-                "n_comments": int(self.entries["n_comments"].get() or 0),
-                "n_loops": int(self.entries["n_loops"].get() or 0),
-                "n_if": int(self.entries["n_if"].get() or 0)
-            }
+            # Get shared fields
+            entry_name = self.entries["name"].get().strip()
+            if not entry_name:
+                raise ValueError("Le nom de l'expérience ne peut pas être vide.")
+            name = os.path.join("experiments", entry_name)
+            context_size = int(self.entries["context_size"].get())
+            depths_raw = self.entries["depths"].get()
+            depths = list(map(int, depths_raw.split(","))) if depths_raw else [1, 2, 3]
+            n_questions = int(self.entries["n_questions"].get())
+            n_padding = int(self.entries["n_padding"].get() or 0)
+            n_comment_lines = int(self.entries["n_comment_lines"].get() or 0)
+            n_loops = int(self.entries["n_loops"].get() or 0)
+            n_if = int(self.entries["n_if"].get() or 0)
+            n_vars = int(self.entries["n_vars"].get() or 0)
+            language = self.entries["language"].get() or "java"
 
+            # Add type-specific config
             if kind == "linear":
-                n_methods = int(self.entries["n_methods"].get() or 50)
-                exp = LinearCallExperiment(**kwargs, n_methods=n_methods)
-            else:
-                depth = int(self.entries["depth"].get() or 3)
+                config = ExperimentConfig(
+                    name=name,
+                    context_size=context_size,
+                    depths=depths,
+                    n_questions=n_questions,
+                    n_padding=n_padding,
+                    n_comment_lines=n_comment_lines,
+                    n_loops=n_loops,
+                    n_if=n_if,
+                    n_vars=n_vars,
+                    language=language,
+                    type="linear"
+                )
+            elif kind == "tree":
+                tree_depth = int(self.entries["tree_depth"].get() or 3)
                 n_tree = int(self.entries["n_tree"].get() or 3)
-                branching = int(self.entries["branching_factor"].get() or 2)
-                exp = TreeCallExperiment(**kwargs, depth=depth, n_tree=n_tree, branching_factor=branching)
+                calls_per_function = int(self.entries["calls_per_function"].get() or 2)
 
-            exp.generate()
-            messagebox.showinfo("Success", f"Experiment created at:\n{exp.experiment_path}")
+                config = ExperimentConfig(
+                    name=name,
+                    context_size=context_size,
+                    depths=depths,
+                    n_questions=n_questions,
+                    n_padding=n_padding,
+                    n_comment_lines=n_comment_lines,
+                    n_loops=n_loops,
+                    n_if=n_if,
+                    n_vars=n_vars,
+                    language=language,
+                    type="tree",
+                    tree_depth=tree_depth,
+                    n_tree=n_tree,
+                    calls_per_function=calls_per_function
+                )
+            else:
+                raise ValueError("Unsupported experiment type")
+
+            self.runner.generate_experiment(config)
+
+            messagebox.showinfo("Success", f"Experiment created in:\n{config.name}")
+
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             messagebox.showerror("Error", f"An error occurred:\n{e}")
 
 if __name__ == "__main__":

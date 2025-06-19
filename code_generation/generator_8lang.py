@@ -29,7 +29,7 @@ class ExperimentConfig:
 class LinearCallExperimentConfig(ExperimentConfig):
     pass
 @dataclass
-class TreeCallExperienceConfig(ExperimentConfig):
+class TreeCallExperimentConfig(ExperimentConfig):
     tree_depth: int = 3
     n_tree: int = 3
     calls_per_function: int = 2
@@ -124,7 +124,7 @@ class LanguageGenerator(ABC):
     def chain_generator(method_names: list, config: ExperimentConfig) -> list:
         """Generates a list of method bodies with respect to the config"""
         # Just an alias for the moment since control works only for java
-        if config.language != "java":
+        if config.language.lower() != "java":
             return comments_generation.generate_chained_method_calls(method_names, config.n_comment_lines)
         
         method_bodies = []
@@ -147,8 +147,11 @@ class LanguageGenerator(ABC):
                                                            n_vars=config.n_vars,
                                                            n_loops=config.n_loops,
                                                            n_if=config.n_if)
+            comment = "\t" + comment.replace("\n", "\n\t")
+            method_body = "\t" + method_body.replace("\n", "\n\t")
             
             method_bodies.append(f"{comment}\n{method_body}")
+            print("The body generated", method_body)
             
         return method_bodies
             
@@ -167,8 +170,7 @@ class JavaGenerator(LanguageGenerator):
             method_bodies.append(method_body)
         return method_bodies
 
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
+    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], chain_generator: Callable) -> str:
         """Generate a Java class with multiple method chains"""
         method_bodies = []
         for chain in chains:
@@ -198,14 +200,13 @@ class CppGenerator(LanguageGenerator):
         for i, method in enumerate(method_names):
             if i < len(method_names) - 1:
                 next_method = method_names[i + 1]
-                method_body = f"    void {method}() {{\n        {next_method}();\n    }}"
+                method_body = f"\tvoid {method}() {{\n\t\t{next_method}();\n    }}"
             else:
-                method_body = f"    void {method}() {{\n        // End of chain\n    }}"
+                method_body = f"\tvoid {method}() {{\n\t// End of chain\n    }}"
             method_bodies.append(method_body)
         return method_bodies
 
-    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], 
-                                          chain_generator: Callable) -> str:
+    def generate_class_with_multiple_chains(self, class_name: str, chains: List[List[str]], chain_generator: Callable) -> str:
         """Generate a C++ class with multiple method chains"""
         method_bodies = []
         for chain in chains:
@@ -567,7 +568,7 @@ class ExperimentRunner:
         """Generate a single context with specified parameters"""
         print(f"Generating {config.language} class with {config.context_size} methods, {n_chains} chains")
         print(f"Questions per depth: {n_questions}, expected total: {n_questions * len(config.depths)}")
-
+        print(f"Comments: {config.n_comment_lines}, loops: {config.n_loops}, conditions: {config.n_if}")
         # Get language-specific generator
         lang_generator = LanguageFactory.get_generator(config.language)
         
@@ -620,6 +621,7 @@ class ExperimentRunner:
 
     def generate_experiment(self, config: ExperimentConfig) -> List[Path]:
         """Generate an experiment based on configuration (and its type)"""
+        print(f"Starting experiment with config {config}")
         if config.type == "linear":
             return self.generate_linear_experiment(config)
         elif config.type == "tree":
@@ -665,7 +667,7 @@ class ExperimentRunner:
             # TODO modify this
             # chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
             chain_generator = lambda c: LanguageGenerator.chain_generator(method_names=c, config=config)
-            
+            print(chain_generator)
             self.generate_single_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
             
             directories.append(exp_dir)
@@ -673,7 +675,7 @@ class ExperimentRunner:
         
         return directories
     
-    def generate_tree_experiment(self, config: TreeCallExperienceConfig):
+    def generate_tree_experiment(self, config: TreeCallExperimentConfig):
         # TODO !! 
         pass
 
@@ -749,14 +751,15 @@ if __name__ == "__main__":
     
     # Example of generating a single experiment with custom config
     custom_config = ExperimentConfig(
-        name="custom_java_experiment",
+        name="experiment/custom_java_experiment",
         context_size=100,
         depths=[1, 2, 3],
         n_questions=50,
+        n_padding=2,
         n_comment_lines=2,
-        n_vars=1,
-        n_loops=1,
-        n_if=1,
+        n_vars=2,
+        n_loops=2,
+        n_if=2,
         language="java",
         type="linear"
     )
