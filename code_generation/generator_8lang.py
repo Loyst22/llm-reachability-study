@@ -24,6 +24,38 @@ class ExperimentConfig:
     time_limit: str = "1:00:00"
     language: str = "java"  # Added language parameter
     type: str = "linear"
+    
+    # Default values for experiments
+    DEFAULT_DIR_NAME = "default_test"
+    DEFAULT_EXP_TYPE = "linear"
+    DEFAULT_CTX_SIZE = 50
+    DEFAULT_DEPTHS = [1, 2, 3, 4, 5]
+    DEFAULT_N_QUESTIONS = 3
+    DEFAULT_N_PADDING = 2
+    DEFAULT_N_COMMENTS = 2
+    DEFAULT_N_LOOPS = 0
+    DEFAULT_N_IF = 0
+    DEFAULT_N_VARS = 0
+    DEFAULT_LANGUAGE = "java"
+    
+    def __str__(self) -> str:
+        return (
+            f"\nExperiment Configuration:\n"
+            f"{'-'*30}\n"
+            f"Name:              {self.name}\n"
+            f"Context Size:      {self.context_size}\n"
+            f"Depths:            {self.depths}\n"
+            f"# Questions:       {self.n_questions}\n"
+            f"# Padding:         {self.n_padding}\n"
+            f"# Comment Lines:   {self.n_comment_lines}\n"
+            f"# Variables:       {self.n_vars}\n"
+            f"# Loops:           {self.n_loops}\n"
+            f"# If Statements:   {self.n_if}\n"
+            f"Time Limit:        {self.time_limit}\n"
+            f"Language:          {self.language}\n"
+            f"Type:              {self.type}\n"
+            f"{'-'*30}"
+        )
 
 @dataclass
 class LinearCallExperimentConfig(ExperimentConfig):
@@ -151,7 +183,6 @@ class LanguageGenerator(ABC):
             method_body = "\t" + method_body.replace("\n", "\n\t")
             
             method_bodies.append(f"{comment}\n{method_body}")
-            print(method_body)
             
         return method_bodies
             
@@ -540,18 +571,6 @@ class LanguageFactory:
 class ExperimentRunner:
     """Main class for running experiments"""
     
-    DEFAULT_DIR_NAME = "default_test"
-    DEFAULT_EXP_TYPE = "linear"
-    DEFAULT_CTX_SIZE = 50
-    DEFAULT_DEPTHS = [1, 2, 3, 4, 5]
-    DEFAULT_N_QUESTIONS = 3
-    DEFAULT_N_PADDING = 2
-    DEFAULT_N_COMMENTS = 2
-    DEFAULT_N_LOOPS = 0
-    DEFAULT_N_IF = 0
-    DEFAULT_N_VARS = 0
-    DEFAULT_LANGUAGE = "java"
-    
     def __init__(self):
         self.method_generator = MethodNameGenerator()
         self.question_generator = QuestionGenerator()
@@ -578,8 +597,8 @@ class ExperimentRunner:
     def generate_single_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
                                chain_generator: Callable, config: LinearCallExperimentConfig) -> None:
         """Generate a single context with specified parameters"""
-        print(f"Generating {config.language} class with {config.context_size} methods, {n_chains} chains")
-        print(f"Questions per depth: {n_questions}, expected total: {n_questions * len(config.depths)}")
+        print(f"\nGenerating {config.language} class with {config.context_size} methods, {n_chains} chains")
+        print(f"Questions per depth: {n_questions}, expected total: {2 * n_questions * len(config.depths)}")
         print(f"Comments: {config.n_comment_lines}, loops: {config.n_loops}, conditions: {config.n_if}")
         # Get language-specific generator
         lang_generator = LanguageFactory.get_generator(config.language)
@@ -601,9 +620,7 @@ class ExperimentRunner:
             all_chains,
             chain_generator
         )
-        
-        print(all_chains)
-        
+                
         # Generate questions for all chains
         all_questions = []
         for chain_names in all_chains:
@@ -612,18 +629,13 @@ class ExperimentRunner:
                 config.language
             )
             all_questions.extend(questions)
-            
-            
-        print(all_questions)
-        print("depth:", config.depths)
-        
+                    
         # Select questions for each depth
         selection = []
         for depth in config.depths:
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, depth, n_questions))
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, -depth, n_questions))
         
-        print(f"Selection of questions: {selection}")
         print(f"Actual number of questions: {len(selection)}")
         print(f"Distance distribution: {self.count_distances(selection)}")
 
@@ -683,7 +695,6 @@ class ExperimentRunner:
         
         print()
         print(f"Methods needed: {n_methods_needed}")
-        print(f"Language: {config.language}")
         
         # We also define the number of chains that fit wrt the context size
         n_chains_in_context = config.context_size // chain_size
@@ -697,13 +708,13 @@ class ExperimentRunner:
             q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
             q_end = (config.n_questions - n_questions_left + n_chains_in_context) * len(config.depths) * 2
             
-            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_qs_{q_start}--{q_end}_{config.language}"
+            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_var_{config.n_vars}_loop_{config.n_loops}_if_{config.n_if}_qs_{q_start}--{q_end}_{config.language}"
             
             # One chain account for one set of questions at most 
             # as the larger depth question often require a full chain
             n_qs = min(n_chains_in_context, n_questions_left)
             
-            print(f"Generating context size {config.context_size} for {n_qs * len(config.depths)} questions")
+            print(f"Generating context of size {config.context_size} for {2* n_qs * len(config.depths)} questions")
             print(f"Output directory: {exp_dir}")
             
             # Use language-specific chain generator
@@ -730,7 +741,7 @@ class ExperimentRunner:
     @staticmethod
     def _format_depths(depths: List[int]) -> str:
         """Format depth list for directory naming"""
-        if len(depths) > 8:
+        if len(depths) > 4:
             return f"{depths[0]}--{depths[-1]}"
         return "_".join(str(d) for d in depths)
 

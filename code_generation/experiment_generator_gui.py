@@ -2,7 +2,7 @@ from math import floor
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
-from generator_8lang import ExperimentRunner, ExperimentConfig, LinearCallExperimentConfig, TreeCallExperimentConfig
+from generator_8lang import ExperimentRunner, ExperimentConfig
 
 
 class ExperimentGUI:
@@ -80,20 +80,20 @@ class ExperimentGUI:
 
     def create_experiment(self):
         try:
-            kind = self.type_var.get() or ExperimentRunner.DEFAULT_EXP_TYPE
+            kind = self.type_var.get() or ExperimentConfig.DEFAULT_EXP_TYPE
             # Get shared fields
-            entry_name = self.entries["name"].get().strip() or ExperimentRunner.DEFAULT_DIR_NAME
+            entry_name = self.entries["name"].get().strip() or ExperimentConfig.DEFAULT_DIR_NAME
             name = os.path.join("experiments", entry_name)
-            context_size = int(self.entries["context_size"].get() or ExperimentRunner.DEFAULT_CTX_SIZE)
+            context_size = int(self.entries["context_size"].get() or ExperimentConfig.DEFAULT_CTX_SIZE)
             depths_raw = self.entries["depths"].get()
-            depths = list(map(int, depths_raw.split(","))) if depths_raw else ExperimentRunner.DEFAULT_DEPTHS
-            n_questions = int(self.entries["n_questions"].get() or ExperimentRunner.DEFAULT_N_QUESTIONS)
-            n_padding = int(self.entries["n_padding"].get() or ExperimentRunner.DEFAULT_N_PADDING)
-            n_comment_lines = int(self.entries["n_comment_lines"].get() or ExperimentRunner.DEFAULT_N_COMMENTS)
-            n_loops = int(self.entries["n_loops"].get() or ExperimentRunner.DEFAULT_N_LOOPS)
-            n_if = int(self.entries["n_if"].get() or ExperimentRunner.DEFAULT_N_IF)
-            n_vars = int(self.entries["n_vars"].get() or ExperimentRunner.DEFAULT_N_VARS)
-            language = self.entries["language"].get() or ExperimentRunner.DEFAULT_LANGUAGE
+            depths = list(map(int, depths_raw.split(","))) if depths_raw else ExperimentConfig.DEFAULT_DEPTHS
+            n_questions = int(self.entries["n_questions"].get() or ExperimentConfig.DEFAULT_N_QUESTIONS)
+            n_padding = int(self.entries["n_padding"].get() or ExperimentConfig.DEFAULT_N_PADDING)
+            n_comment_lines = int(self.entries["n_comment_lines"].get() or ExperimentConfig.DEFAULT_N_COMMENTS)
+            n_loops = int(self.entries["n_loops"].get() or ExperimentConfig.DEFAULT_N_LOOPS)
+            n_if = int(self.entries["n_if"].get() or ExperimentConfig.DEFAULT_N_IF)
+            n_vars = int(self.entries["n_vars"].get() or ExperimentConfig.DEFAULT_N_VARS)
+            language = self.entries["language"].get() or ExperimentConfig.DEFAULT_LANGUAGE
 
             # Add type-specific config
             if kind == "linear":
