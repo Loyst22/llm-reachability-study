@@ -40,21 +40,20 @@ class ExperimentConfig:
     
     def __str__(self) -> str:
         return (
-            f"\nExperiment Configuration:\n"
-            f"{'-'*30}\n"
-            f"Name:              {self.name}\n"
-            f"Context Size:      {self.context_size}\n"
-            f"Depths:            {self.depths}\n"
-            f"# Questions:       {self.n_questions}\n"
-            f"# Padding:         {self.n_padding}\n"
-            f"# Comment Lines:   {self.n_comment_lines}\n"
-            f"# Variables:       {self.n_vars}\n"
-            f"# Loops:           {self.n_loops}\n"
-            f"# If Statements:   {self.n_if}\n"
-            f"Time Limit:        {self.time_limit}\n"
-            f"Language:          {self.language}\n"
-            f"Type:              {self.type}\n"
-            f"{'-'*30}"
+            f"\n{'-'*46}\n"
+            f"Name:                 {self.name}\n"
+            f"Context Size:         {self.context_size}\n"
+            f"Depths:               {self.depths}\n"
+            f"Questions per depth:  {self.n_questions}\n"
+            f"Padding:              {self.n_padding}\n"
+            f"Comment Lines:        {self.n_comment_lines}\n"
+            f"Variables:            {self.n_vars}\n"
+            f"Loops:                {self.n_loops}\n"
+            f"If Statements:        {self.n_if}\n"
+            f"Time Limit:           {self.time_limit}\n"
+            f"Language:             {self.language}\n"
+            f"Type:                 {self.type}\n"
+            f"{'-'*46}"
         )
 
 @dataclass
@@ -597,9 +596,7 @@ class ExperimentRunner:
     def generate_single_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
                                chain_generator: Callable, config: LinearCallExperimentConfig) -> None:
         """Generate a single context with specified parameters"""
-        print(f"\nGenerating {config.language} class with {config.context_size} methods, {n_chains} chains")
-        print(f"Questions per depth: {n_questions}, expected total: {2 * n_questions * len(config.depths)}")
-        print(f"Comments: {config.n_comment_lines}, loops: {config.n_loops}, conditions: {config.n_if}")
+        # print(f"Generating {config.language} class with {config.context_size} methods")
         # Get language-specific generator
         lang_generator = LanguageFactory.get_generator(config.language)
         
@@ -612,7 +609,6 @@ class ExperimentRunner:
         # Subdivide the list of method names into chains of methods
         all_chains = self.divide_list_into_chunks(method_names, chain_size)
         
-        print(f"Actual number of chains: {len(all_chains)}")
         
         # Generate the class/module
         the_class = lang_generator.generate_class_with_multiple_chains(
@@ -636,7 +632,8 @@ class ExperimentRunner:
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, depth, n_questions))
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, -depth, n_questions))
         
-        print(f"Actual number of questions: {len(selection)}")
+        print(f"Chains:\n\tExpected total: {n_chains}\n\tGround truth: {len(all_chains)}")
+        print(f"Questions:\n\tExpected total: {2 * n_questions * len(config.depths)}\n\tGround truth: {len(selection)}")
         print(f"Distance distribution: {self.count_distances(selection)}")
 
         # Write all files
@@ -694,7 +691,7 @@ class ExperimentRunner:
         n_methods_needed = chain_size * config.n_questions
         
         print()
-        print(f"Methods needed: {n_methods_needed}")
+        print(f"Methods needed to generate enough questions: {n_methods_needed}")
         
         # We also define the number of chains that fit wrt the context size
         n_chains_in_context = config.context_size // chain_size
@@ -714,8 +711,7 @@ class ExperimentRunner:
             # as the larger depth question often require a full chain
             n_qs = min(n_chains_in_context, n_questions_left)
             
-            print(f"Generating context of size {config.context_size} for {2* n_qs * len(config.depths)} questions")
-            print(f"Output directory: {exp_dir}")
+            print(f"\nGenerating {config.language} context of size {config.context_size} for {2*n_qs*len(config.depths)} questions")
             
             # Use language-specific chain generator
             lang_generator = LanguageFactory.get_generator(config.language)
@@ -731,6 +727,8 @@ class ExperimentRunner:
             
             directories.append(exp_dir)
             n_questions_left -= n_chains_in_context
+            
+            print(f"Output directory: {exp_dir}")
         
         return directories
     
