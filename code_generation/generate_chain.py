@@ -255,6 +255,7 @@ def generate_class_new(directory:str, context_size:int, n_chains:int, chain_size
     # Divide the method names into sublists of size `chain_size` : the actual chains of method calls
     all_chains = divide_list_into_sublists(method_names, chain_size)
     print("actual number of chains: ", len(all_chains))
+    print("the chains", all_chains)
     # Generate the class with the chains of method calls
     the_class = generate_class_with_multiple_chains("TheClass", all_chains, chain_generator)
     
@@ -265,6 +266,8 @@ def generate_class_new(directory:str, context_size:int, n_chains:int, chain_size
         questions = generate_call_questions_with_distances_and_chains_new(chain_names)
         all_qs.append(questions)
     all_qs = flatten_list(all_qs)
+    
+    print(all_qs)
     
     # Select questions based on the specified distances and number of questions
     selection = []
@@ -339,10 +342,17 @@ def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n
     Returns:
         list: A list of directories where the generated files are saved.
     """
-    chain_size = max(depths) + n_pad
+    # It is here necessary to add 2 because:
+    # - For a valid chain of n methods, the largest depth/distance is n-1
+    # - For an invalid chain of n methods, the largest depth/distance is -(n-2)
+    chain_size = max(depths) + n_pad + 2
     n_methods_needed = chain_size * n_questions
     print("number of methods needed: ", n_methods_needed)
+    # We take into account the situations where we don't have enough methods in the context
+    if chain_size > context_size:
+        context_size = chain_size
     n_chains_in_context = context_size // chain_size
+    print(n_chains_in_context)
     n_questions_left = n_questions
     exp_dir = os.path.join(BASE_DIR, "..", "experiments")
     path_name = os.path.join(exp_dir, exp_name)
@@ -358,10 +368,10 @@ def generate_all(exp_name:str, context_size:int, depths:list, n_questions:int, n
             exp_dir.mkdir(parents=True, exist_ok=True) 
         # generate n_chains_in_context questions per depth
         n_qs = n_chains_in_context if n_chains_in_context < n_questions_left else n_questions_left
-        print("generate a context size of ", context_size, " for ", n_qs * len(depths), " questions, with ", n_chains_in_context, " chains")
+        print("generate a context of size", context_size, "for", n_qs * len(depths), "questions, with", n_chains_in_context, "chains")
         print("in: ", exp_dir)
         chain_generator = lambda c: comments.generate_chained_method_calls(c, n_comment_lines)
-        generate_class_new(exp_dir, context_size, n_chains_in_context, chain_size,  depths, n_qs, chain_generator) # + chain_size + exp name
+        generate_class_new(exp_dir, context_size, n_chains_in_context, chain_size, depths, n_qs, chain_generator) # + chain_size + exp name
         dirs.append(exp_dir)
         n_questions_left -= n_chains_in_context
     return dirs
@@ -437,8 +447,9 @@ generate_all("huge-flow", 400, range(1, 8), 100, 2)
 
 # Similar to the above, but with comments
 
+generate_all("small-comment_with_padding", 9, range(1,8), 1, 2)
+generate_all("small-comment_without_padding", 9, range(1,8), 1, 0)
 """
-generate_all("small-comment", 30, range(1,8), 100, 2)
 generate_all("smallish-comment", 50, range(1,8), 100, 2)
 generate_all("medium-comment", 75, range(1,8), 100, 2)
 generate_all("medium-plus-comment", 100, range(1,8), 100, 2)
@@ -454,7 +465,7 @@ generate_all("medium-large-comment", 125, range(1,8), 100, 2)
 # - 3 qs of length 8 
 # ...
 # - 9 qs of length 1
-# negative questions
+# Negative questions
 # - 1 q of each length!
 
 # so we need n_questions times n chains

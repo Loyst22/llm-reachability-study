@@ -131,7 +131,11 @@ def generate_method_body(next_method: str = None,
     # Add optional condition checks (like 'if' statements)
     for _ in range(n_if):  # Decide if we add a condition or not
         condition = random_condition(variables)
-        control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
+        if next_method is None: 
+            var = random.choice(variables)
+            control_flow.append(f"\tif ({condition}) {{\n\tSystem.out.println({var.name});\n\t}}")
+        else:
+            control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
     
     first_while = True
     to_prepend = []

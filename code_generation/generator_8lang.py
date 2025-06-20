@@ -151,7 +151,7 @@ class LanguageGenerator(ABC):
             method_body = "\t" + method_body.replace("\n", "\n\t")
             
             method_bodies.append(f"{comment}\n{method_body}")
-            print("The body generated", method_body)
+            print(method_body)
             
         return method_bodies
             
@@ -590,6 +590,8 @@ class ExperimentRunner:
             chain_generator
         )
         
+        print(all_chains)
+        
         # Generate questions for all chains
         all_questions = []
         for chain_names in all_chains:
@@ -598,6 +600,10 @@ class ExperimentRunner:
                 config.language
             )
             all_questions.extend(questions)
+            
+            
+        print(all_questions)
+        print("depth:", config.depths)
         
         # Select questions for each depth
         selection = []
@@ -605,6 +611,7 @@ class ExperimentRunner:
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, depth, n_questions))
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, -depth, n_questions))
         
+        print(f"Selection of questions: {selection}")
         print(f"Actual number of questions: {len(selection)}")
         print(f"Distance distribution: {self.count_distances(selection)}")
 
@@ -633,8 +640,14 @@ class ExperimentRunner:
     def generate_linear_experiment(self, config: LinearCallExperimentConfig):
         """Generate a complete linear-chain experiment based on configuration"""
         
-        chain_size = max(config.depths) + config.n_padding
+        # It is here necessary to add 2 because:
+        # - For a valid chain of n methods, the largest depth/distance is n-1
+        # - For an invalid chain of n methods, the largest depth/distance is -(n-2)
+        chain_size = max(config.depths) + config.n_padding + 2
         n_methods_needed = chain_size * config.n_questions
+        
+        if chain_size > config.context_size:
+            config.context_size = chain_size + 2
         
         print()
         print(f"Methods needed: {n_methods_needed}")
@@ -664,7 +677,6 @@ class ExperimentRunner:
             # first claude fix, disregarded and overlooking all the architectural stuff :-)
             # chain_generator = lang_generator.generate_chained_method_calls
             
-            # TODO modify this
             # chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
             chain_generator = lambda c: LanguageGenerator.chain_generator(method_names=c, config=config)
             print(chain_generator)
@@ -750,17 +762,34 @@ if __name__ == "__main__":
     # runner.generate_all_experiments(["java"])
     
     # Example of generating a single experiment with custom config
+    
+    # custom_config = ExperimentConfig(
+    #     name="experiment/custom_java_experiment",
+    #     context_size=100,
+    #     depths=[1, 2, 3],
+    #     n_questions=50,
+    #     n_padding=2,
+    #     n_comment_lines=2,
+    #     n_vars=2,
+    #     n_loops=2,
+    #     n_if=2,
+    #     language="java",
+    #     type="linear"
+    # )
+    
+    # runner.generate_experiment(custom_config)
+    
     custom_config = ExperimentConfig(
-        name="experiment/custom_java_experiment",
-        context_size=100,
-        depths=[1, 2, 3],
-        n_questions=50,
-        n_padding=2,
-        n_comment_lines=2,
-        n_vars=2,
-        n_loops=2,
-        n_if=2,
-        language="java",
+        name="experiments/test",
+        context_size=5,
+        depths=[1, 2, 3, 4, 5, 6, 7, 8],
+        n_questions=1,
+        n_padding=0,
+        n_comment_lines=1,
+        n_vars=1,
+        n_loops=1,
+        n_if=1,
+        language="Java",
         type="linear"
     )
     runner.generate_experiment(custom_config)
