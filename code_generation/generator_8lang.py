@@ -540,6 +540,18 @@ class LanguageFactory:
 class ExperimentRunner:
     """Main class for running experiments"""
     
+    DEFAULT_DIR_NAME = "default_test"
+    DEFAULT_EXP_TYPE = "linear"
+    DEFAULT_CTX_SIZE = 50
+    DEFAULT_DEPTHS = [1, 2, 3, 4, 5]
+    DEFAULT_N_QUESTIONS = 3
+    DEFAULT_N_PADDING = 2
+    DEFAULT_N_COMMENTS = 2
+    DEFAULT_N_LOOPS = 0
+    DEFAULT_N_IF = 0
+    DEFAULT_N_VARS = 0
+    DEFAULT_LANGUAGE = "java"
+    
     def __init__(self):
         self.method_generator = MethodNameGenerator()
         self.question_generator = QuestionGenerator()
@@ -638,35 +650,59 @@ class ExperimentRunner:
         
     
     def generate_linear_experiment(self, config: LinearCallExperimentConfig):
-        """Generate a complete linear-chain experiment based on configuration"""
+        """Generate a complete linear-chain experiment based on configuration
+        This method generates a series of directories, each containing:
+        - A Java class with chained method calls
+        - A system prompt for the llm
+        - A file with reachability questions
+        - A file with the names of the methods used in the experiment
+        - A file with the chains of methods used for the reachability questions
+
+        Args:
+            config (LinearCallExperimentConfig): Configuration for the linear call experiment
+
+        Returns:
+            list: List of directories where the experiments were generated
+        """
+        base_dir = Path(config.name)
+        directories = []
         
-        # It is here necessary to add 2 because:
+        # It is here necessary to add at least 2 to the size of the chain because:
         # - For a valid chain of n methods, the largest depth/distance is n-1
         # - For an invalid chain of n methods, the largest depth/distance is -(n-2)
-        chain_size = max(config.depths) + config.n_padding + 2
-        n_methods_needed = chain_size * config.n_questions
+        # If the padding is 0 or 1, we need at least 2 additional methods to take that into account
+        chain_size = max(config.depths) + min(config.n_padding, 2)
         
+        # In case the context size chosen is too small, we take an appropriate size wrt the chain size
+        # This is to ensure that the number of chains that fit into the context is at least 1
         if chain_size > config.context_size:
             config.context_size = chain_size + 2
+        
+        # We need n questions per depth, each chain has a size of chain_size
+        n_methods_needed = chain_size * config.n_questions
         
         print()
         print(f"Methods needed: {n_methods_needed}")
         print(f"Language: {config.language}")
         
+        # We also define the number of chains that fit wrt the context size
         n_chains_in_context = config.context_size // chain_size
+        
+        # And we create new contexts until we have enough questions
         n_questions_left = config.n_questions
         
-        base_dir = Path(config.name)
-        directories = []
-        
         while n_questions_left > 0:
+            # Name the experiment sub-directory:
             depth_str = self._format_depths(config.depths)
             q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
             q_end = (config.n_questions - n_questions_left + n_chains_in_context) * len(config.depths) * 2
             
             exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_qs_{q_start}--{q_end}_{config.language}"
             
+            # One chain account for one set of questions at most 
+            # as the larger depth question often require a full chain
             n_qs = min(n_chains_in_context, n_questions_left)
+            
             print(f"Generating context size {config.context_size} for {n_qs * len(config.depths)} questions")
             print(f"Output directory: {exp_dir}")
             
@@ -679,7 +715,7 @@ class ExperimentRunner:
             
             # chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
             chain_generator = lambda c: LanguageGenerator.chain_generator(method_names=c, config=config)
-            print(chain_generator)
+            
             self.generate_single_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
             
             directories.append(exp_dir)
@@ -792,5 +828,5 @@ if __name__ == "__main__":
         language="Java",
         type="linear"
     )
-    runner.generate_experiment(custom_config)
+    # runner.generate_experiment(custom_config)
 

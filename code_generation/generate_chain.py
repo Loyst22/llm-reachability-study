@@ -447,9 +447,9 @@ generate_all("huge-flow", 400, range(1, 8), 100, 2)
 
 # Similar to the above, but with comments
 
+"""
 generate_all("small-comment_with_padding", 9, range(1,8), 1, 2)
 generate_all("small-comment_without_padding", 9, range(1,8), 1, 0)
-"""
 generate_all("smallish-comment", 50, range(1,8), 100, 2)
 generate_all("medium-comment", 75, range(1,8), 100, 2)
 generate_all("medium-plus-comment", 100, range(1,8), 100, 2)
