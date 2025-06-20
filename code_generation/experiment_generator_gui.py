@@ -1,7 +1,9 @@
+from math import floor
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 from generator_8lang import ExperimentRunner, ExperimentConfig, LinearCallExperimentConfig, TreeCallExperimentConfig
+
 
 class ExperimentGUI:
     def __init__(self, root):
@@ -78,22 +80,20 @@ class ExperimentGUI:
 
     def create_experiment(self):
         try:
-            kind = self.type_var.get()
+            kind = self.type_var.get() or ExperimentRunner.DEFAULT_EXP_TYPE
             # Get shared fields
-            entry_name = self.entries["name"].get().strip()
-            if not entry_name:
-                raise ValueError("Le nom de l'expérience ne peut pas être vide.")
+            entry_name = self.entries["name"].get().strip() or ExperimentRunner.DEFAULT_DIR_NAME
             name = os.path.join("experiments", entry_name)
-            context_size = int(self.entries["context_size"].get())
+            context_size = int(self.entries["context_size"].get() or ExperimentRunner.DEFAULT_CTX_SIZE)
             depths_raw = self.entries["depths"].get()
-            depths = list(map(int, depths_raw.split(","))) if depths_raw else [1, 2, 3]
-            n_questions = int(self.entries["n_questions"].get())
-            n_padding = int(self.entries["n_padding"].get() or 0)
-            n_comment_lines = int(self.entries["n_comment_lines"].get() or 0)
-            n_loops = int(self.entries["n_loops"].get() or 0)
-            n_if = int(self.entries["n_if"].get() or 0)
-            n_vars = int(self.entries["n_vars"].get() or 0)
-            language = self.entries["language"].get() or "java"
+            depths = list(map(int, depths_raw.split(","))) if depths_raw else ExperimentRunner.DEFAULT_DEPTHS
+            n_questions = int(self.entries["n_questions"].get() or ExperimentRunner.DEFAULT_N_QUESTIONS)
+            n_padding = int(self.entries["n_padding"].get() or ExperimentRunner.DEFAULT_N_PADDING)
+            n_comment_lines = int(self.entries["n_comment_lines"].get() or ExperimentRunner.DEFAULT_N_COMMENTS)
+            n_loops = int(self.entries["n_loops"].get() or ExperimentRunner.DEFAULT_N_LOOPS)
+            n_if = int(self.entries["n_if"].get() or ExperimentRunner.DEFAULT_N_IF)
+            n_vars = int(self.entries["n_vars"].get() or ExperimentRunner.DEFAULT_N_VARS)
+            language = self.entries["language"].get() or ExperimentRunner.DEFAULT_LANGUAGE
 
             # Add type-specific config
             if kind == "linear":
@@ -136,7 +136,10 @@ class ExperimentGUI:
 
             self.runner.generate_experiment(config)
 
-            messagebox.showinfo("Success", f"Experiment created in:\n{config.name}")
+            if self.entries["name"].get():
+                messagebox.showinfo("Success", f"Experiment created in:\n{config.name}")
+            else:
+                messagebox.showinfo("Success", f"Directory name not specified.\nExperiment created in:\n{config.name}")
 
         except Exception as e:
             import traceback
@@ -146,4 +149,14 @@ class ExperimentGUI:
 if __name__ == "__main__":
     root = tk.Tk()
     app = ExperimentGUI(root)
+    
+    # Centering the window
+    root.update_idletasks()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    x = (root.winfo_screenwidth() // 2) - (width // 2)
+    y = (root.winfo_screenheight() // 2) - (int(height / 1.5))
+    root.geometry(f'+{x}+{y}')
+
+    # Starting main loop
     root.mainloop()
