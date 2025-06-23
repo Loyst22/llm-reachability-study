@@ -154,7 +154,6 @@ def select_n_of_distance(questions_with_distances_maybe_chain:list, distance:int
     # Randomly sample up to `n` questions from the filtered list
     return random.sample(filtered_questions, min(n, len(filtered_questions)))
 
-
 def count_distances(tuples_list:list):
     """Count the occurrences of each distance in a list of tuples.
 

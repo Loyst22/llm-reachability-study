@@ -4,9 +4,11 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Tuple, Callable
 from abc import ABC, abstractmethod
+from math import ceil
 import prompts as p
 import control_flow
 import comments_generation as comments_generation
+import generate_tree_chains as gen_tree
 
 
 @dataclass
@@ -733,8 +735,62 @@ class ExperimentRunner:
         return directories
     
     def generate_tree_experiment(self, config: TreeCallExperimentConfig):
+        """Generate a complete tree-chain experiment based on configuration
+        This method generates a series of directories, each containing:
+        - A Java class with chained method calls
+        - A system prompt for the llm
+        - A file with reachability questions
+        - A file with the names if the methods used in the experiment
+        - A file with the chains of methods used for the reachability questions
+        - A directory with files describing the trees used for the experiment
+
+        Args:
+            config (TreeCallExperimentConfig): Configuration for the tree call experiment
+        
+        Returns:
+            list: List of directories where the experiments were generated
+        """
         # TODO !! 
-        pass
+        base_dir = Path(config.name)
+        directories = []
+        
+        chain_size = max(config.depths) + min(config.n_padding, 2)
+        
+        # In case the context size chosen is too small, we take an appropriate size wrt the chain size
+        # This is to ensure that the number of chains that fit into the context is at least 1
+        if chain_size > config.context_size:
+            config.context_size = chain_size + 2
+        
+        # We need to define the number of trees and their depths
+        # To do so we use the chain size and find the appropriate tree depth
+        tree_depth = 0
+        methods_per_tree = 2**(tree_depth + 1) - 1
+        while methods_per_tree - 1 < chain_size:
+            tree_depth += 1
+            methods_per_tree = 2**(tree_depth + 1) - 1
+            
+        # Now that we know the depth of the trees we must determine the number of trees to generate
+        # The number of trees must correspond to the context size of the config
+        methods_per_tree = 2**(tree_depth + 1) - 1
+        n_trees = ceil(config.context_size/methods_per_tree)
+        
+        # We create new contexts until we have enough questions
+        n_questions_left = config.n_questions
+        
+        context_counter = 1
+        
+        while n_questions_left > 0:
+            depth_str = self._format_depths(config.depths)
+            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_var_{config.n_vars}_loop_{config.n_loops}_if_{config.n_if}_qs_{context_counter}_{config.language}"
+            
+            n_questions_generated = gen_tree.generate_exp(exp_dir, n_trees, tree_depth, max(config.depths), n_questions_left)
+            n_questions_left -= n_questions_generated
+
+            context_counter += 1
+            
+            print(f"Output directory: {exp_dir}")
+        
+        return directories
 
     @staticmethod
     def _format_depths(depths: List[int]) -> str:

@@ -86,7 +86,7 @@ def generate_single_call_tree(tree_depth:int):
     """
     n_methods = 2**(tree_depth + 1) - 1
     method_names = gen.generate_unique_method_names(n_methods)
-    print(f"Generating a tree with {n_methods} methods and depth {tree_depth}")
+    # print(f"Generating a tree with {n_methods} methods and depth {tree_depth}")
     # print("Method names:", method_names)
     root = method_tree.build_binary_tree(tree_depth, method_names)
     return root
@@ -98,7 +98,7 @@ def generate_single_call_tree_from_names(tree_depth:int, method_names:list):
         tree_depth (int): The depth of the tree to be generated.
         method_names (list): A list of method names to be used in the tree structure.
     """
-    print(f"Generating a tree with {len(method_names)} methods and depth {tree_depth}")
+    # print(f"Generating a tree with {len(method_names)} methods and depth {tree_depth}")
     # print("Method names:", method_names)
     root = method_tree.build_binary_tree(tree_depth, method_names)
     return root
@@ -113,7 +113,7 @@ def generate_many_call_trees(dir:str, tree_depth:int, n_trees:int):
     method_names = gen.generate_unique_method_names(n_trees * (2**(tree_depth + 1) - 1))
     trees = []
     for i in range(n_trees):
-        print(f"Generating tree {i+1}/{n_trees} with depth {tree_depth}")
+        # print(f"Generating tree {i+1}/{n_trees} with depth {tree_depth}")
         tree = generate_single_call_tree_from_names(tree_depth, method_names[i * (2**(tree_depth + 1) - 1):(i + 1) * (2**(tree_depth + 1) - 1)])
         trees.append(tree)
         
@@ -195,7 +195,7 @@ def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list
     gen.write_questions_to_file(selection, dir / "reachability_questions.txt")
     gen.write_prompt_to_file(p.in_context_tree_calls, class_body, dir / "system.txt")
     
-def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None, n_questions:int = 100):
+def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None, n_questions:int = 100) -> int:
     """Generate an experiment with multiple trees and save the class to a file.
 
     Args:
@@ -214,17 +214,35 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     # The maximum length of a chain is deduced from the tree depth
     if max_chain_length is None:
         max_chain_length = (2**(tree_depth + 1) - 1)
-    
-    for depth in range(2, max_chain_length + 1):
-        # print(f"Generating questions for chains of depth {depth}")
+                
+    for depth in range(max_chain_length + 1):
         # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
         selection.extend(gen.select_n_of_distance(valid_questions, depth, n_questions))
-        # TODO : handle negative depths 
+        # TODO : see if we can manage to get negative questions for all distances
         selection.extend(gen.select_n_of_distance(invalid_questions, -depth, n_questions))
+        
+    distance_dict = gen.count_distances(selection)
+    
+    min_amount_of_questions = n_questions
+    
+    for value in distance_dict.values():
+        if value < min_amount_of_questions:
+            min_amount_of_questions = value
+            
+    selection = []
+    
+    for depth in range(max_chain_length + 1):
+        # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
+        selection.extend(gen.select_n_of_distance(valid_questions, depth, min_amount_of_questions))
+        # TODO : see if we can manage to get negative questions for all distances
+        selection.extend(gen.select_n_of_distance(invalid_questions, -depth, min_amount_of_questions))
+    
     print(f"Selected {len(selection)} questions")
     print(f"Questions per distance after selection: {gen.count_distances(selection)}")
     
     generate_class_from_multiple_trees(directory=exp_name, class_name="TheClass", trees=trees, method_names=method_names, selection=selection)
+    
+    return min_amount_of_questions
     
 def find_all_valid_chains(trees:list):
     """Find all chains in the trees with a maximum length.
@@ -236,7 +254,7 @@ def find_all_valid_chains(trees:list):
     for tree in trees:
         chains = method_tree.find_all_valid_chains_depth_first(tree)
         all_valid_chains.extend(chains)
-        print(f"Found {len(chains)} valid chains in tree {trees.index(tree) + 1}")
+        # print(f"Found {len(chains)} valid chains in tree {trees.index(tree) + 1}")
         # print(f"Chains found in tree {trees.index(tree) + 1}: {chains}")
     
     print(f"Total valid chains found: {len(all_valid_chains)}")
@@ -263,7 +281,7 @@ def find_all_invalid_chains(trees:list):
     for tree in trees:
         invalid_chains = method_tree.find_all_invalid_chains_depth_first(tree)
         all_invalid_chains.extend(invalid_chains)
-        print(f"Found {len(invalid_chains)} invalid chains in tree {trees.index(tree) + 1}")
+        # print(f"Found {len(invalid_chains)} invalid chains in tree {trees.index(tree) + 1}")
         # print(f"Invalid chains found in tree {trees.index(tree) + 1}: {invalid_chains}")
     
     print(f"Total invalid chains found: {len(all_invalid_chains)}")
@@ -331,4 +349,4 @@ def write_chains_to_file(questions:list, filename:str):
 # Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
 # generate_exp(exp_name="tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
 # Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
-generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)
+# generate_exp(exp_name="experiments/large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)

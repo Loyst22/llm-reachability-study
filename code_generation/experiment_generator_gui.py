@@ -2,7 +2,7 @@ from math import floor
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
-from generator_8lang import ExperimentRunner, ExperimentConfig
+from generator_8lang import ExperimentRunner, ExperimentConfig, LinearCallExperimentConfig, TreeCallExperimentConfig
 
 
 class ExperimentGUI:
@@ -97,7 +97,7 @@ class ExperimentGUI:
 
             # Add type-specific config
             if kind == "linear":
-                config = ExperimentConfig(
+                config = LinearCallExperimentConfig(
                     name=name,
                     context_size=context_size,
                     depths=depths,
@@ -115,7 +115,7 @@ class ExperimentGUI:
                 n_tree = int(self.entries["n_tree"].get() or 3)
                 calls_per_function = int(self.entries["calls_per_function"].get() or 2)
 
-                config = ExperimentConfig(
+                config = TreeCallExperimentConfig(
                     name=name,
                     context_size=context_size,
                     depths=depths,
