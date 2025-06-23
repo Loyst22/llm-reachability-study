@@ -206,7 +206,6 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {exp_name}")
     trees, method_names = generate_many_call_trees(exp_name, tree_depth, n_trees)
     print(f"Generated {len(trees)} trees")
-    method_tree.depth_first_traversal(trees[0])
     _, valid_questions = find_all_valid_chains(trees=trees)
     _, invalid_questions = find_all_invalid_chains(trees=trees)
     
@@ -217,7 +216,7 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
         max_chain_length = (2**(tree_depth + 1) - 1)
     
     for depth in range(2, max_chain_length + 1):
-        print(f"Generating questions for chains of depth {depth}")
+        # print(f"Generating questions for chains of depth {depth}")
         # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
         selection.extend(gen.select_n_of_distance(valid_questions, depth, n_questions))
         # TODO : handle negative depths 
@@ -237,10 +236,10 @@ def find_all_valid_chains(trees:list):
     for tree in trees:
         chains = method_tree.find_all_valid_chains_depth_first(tree)
         all_valid_chains.extend(chains)
-        print(f"Found {len(chains)} chains in tree {trees.index(tree) + 1}")
+        print(f"Found {len(chains)} valid chains in tree {trees.index(tree) + 1}")
         # print(f"Chains found in tree {trees.index(tree) + 1}: {chains}")
     
-    print(f"Total chains found: {len(all_valid_chains)}")
+    print(f"Total valid chains found: {len(all_valid_chains)}")
     
     questions_with_distances_and_chains = generate_questions_from_valid_chains(all_valid_chains)
     # print(f"Questions generated from valid chains: {questions_with_distances_and_chains}")
@@ -264,12 +263,12 @@ def find_all_invalid_chains(trees:list):
     for tree in trees:
         invalid_chains = method_tree.find_all_invalid_chains_depth_first(tree)
         all_invalid_chains.extend(invalid_chains)
-        # print(f"Found {len(invalid_chains)} invalid chains in tree {trees.index(tree) + 1}")
+        print(f"Found {len(invalid_chains)} invalid chains in tree {trees.index(tree) + 1}")
         # print(f"Invalid chains found in tree {trees.index(tree) + 1}: {invalid_chains}")
     
     print(f"Total invalid chains found: {len(all_invalid_chains)}")
     
-    print(f"Invalid chains: {all_invalid_chains}")
+    # print(f"Invalid chains: {all_invalid_chains}")
     
     questions_with_distances_and_chains = generate_questions_from_invalid_chains(all_invalid_chains)
     
@@ -286,14 +285,15 @@ def generate_questions_from_valid_chains(chains:list, max_chain_length:int = Non
         max_chain_length (int): The maximum length of the chains to consider.
     """
     questions_with_distances_and_chains = []
-    for chain in chains:
-        if max_chain_length is None or len(chain) <= max_chain_length:
+    for item in chains:
+        if max_chain_length is None or item["distance"] <= max_chain_length:
+            chain = item["chain"]
             question = (
                 f"Does `{chain[0]}` call `{chain[-1]}`, either directly or indirectly? "
                 f"Think step-by-step by following the method calls from `{chain[0]}`."
             )
             
-            distance = len(chain)
+            distance = item["distance"]
             
             questions_with_distances_and_chains.append((question, distance, chain))
     return questions_with_distances_and_chains
@@ -315,8 +315,8 @@ def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = N
                     f"Does `{item['node']}` call `{unreachable}`, either directly or indirectly? "
                     f"Think step-by-step by following the method calls from `{item['node']}`."
                 )
-                distance = item['distance']
-                chain = item['chain']
+                distance = item["distance"]
+                chain = item["chain"]
 
                 questions_with_distances_and_chains.append((question, distance, chain))
         
@@ -331,4 +331,4 @@ def write_chains_to_file(questions:list, filename:str):
 # Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
 # generate_exp(exp_name="tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
 # Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
-# generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)
+generate_exp(exp_name="large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)

@@ -1,8 +1,9 @@
 from pathlib import Path
 
 class Node:
-    def __init__(self, name, left=None, right=None):
+    def __init__(self, name, parent=None, left=None, right=None):
         self.name = name      # Name of java method
+        self.parent = parent  # Parent node
         self.left = left      # Left child node
         self.right = right    # Right child node
 
@@ -29,23 +30,29 @@ class Node:
         with open(file_path, 'w') as f:
             write_node(self)
 
-def build_binary_tree(depth: int, method_names: list, index: int = 0) -> Node:
+def build_binary_tree(depth: int, method_names: list, index: int = 0, parent: Node = None) -> Node:
     """Build a binary tree from a list of method names.
 
     Args:
         depth (int): Description of the depth of the tree.
         method_names (list): A list of method names to be used as node names in the tree.
         index (int, optional): Used to track the current index in the method_names list while building the tree. Defaults to 0.
-
+        parent (Node, optional): The parent node of the current node. Defaults to None        
+        
     Returns:
         Node: _description_
     """
     if depth < 0 or index >= len(method_names):
         return None
+    
     name = method_names[index]
-    left = build_binary_tree(depth - 1, method_names, 2 * index + 1)
-    right = build_binary_tree(depth - 1, method_names, 2 * index + 2)
-    return Node(name, left, right)
+    node = Node(name=name, parent=parent)
+    
+    node.left = build_binary_tree(depth - 1, method_names, 2 * index + 1, node)
+    node.right = build_binary_tree(depth - 1, method_names, 2 * index + 2, node)
+    
+    return node
+
 
 def depth_first_traversal(node: Node):
     """Perform a depth-first traversal of the tree.
@@ -55,23 +62,102 @@ def depth_first_traversal(node: Node):
     """
     
     method_names = []
-    compteur = 0
+    counter = -1
+    counter_with_backtracking = -1
+    node_traversal = node
     
     def dft_rec(current_node: Node):
-        nonlocal compteur
+        nonlocal counter, counter_with_backtracking, node_traversal
         if current_node is None:
             return
-        method_names.append(current_node.name)
-        compteur += 1
-        dft_rec(current_node.left)
-        dft_rec(current_node.right)
-    
-    dft_rec(node)
-    # print(f"Depth-first traversal completed. Total methods: {compteur}")
-    # print("Method names:", method_names)
-    
-    return method_names, compteur        
         
+        method_names.append(current_node.name)
+        counter += 1
+        counter_with_backtracking += 1
+        node_traversal = current_node
+        
+        dft_rec(current_node.left)
+        if current_node.left is not None:
+            counter_with_backtracking += 1
+        
+        dft_rec(current_node.right)
+        if current_node.right is not None:
+            counter_with_backtracking += 1
+        
+
+    dft_rec(node)
+    
+    relative_height = get_relative_height(node_traversal, node)
+    
+    counter_with_backtracking -= relative_height
+    
+    # print(f"Depth-first traversal completed. Distance: {counter}. With backtracking: {counter_with_backtracking}. Height: {relative_height}")
+    
+    return method_names, counter, counter_with_backtracking, relative_height       
+        
+
+def depth_first_search(node: Node, search_node: Node):
+    """Perform a depth-first search of the tree.
+    The search starts from node and stops at search_node
+    The point is to get a distances (normal, with backtracking and height)
+
+    Args:
+        node (Node): The root node of the tree.
+        search_node (Node): The node we're searching for
+    """
+    
+    method_names = []
+    counter = 0
+    counter_with_backtracking = 0
+    is_found = False
+    
+    def dft_rec(current_node: Node):
+        nonlocal counter, counter_with_backtracking, is_found
+        if current_node is None or is_found:
+            return
+        
+        if current_node == search_node:
+            is_found = True
+            return
+        
+        method_names.append(current_node.name)
+        counter += 1
+        counter_with_backtracking += 1
+        
+        dft_rec(current_node.left)
+        if is_found: 
+            return
+        if current_node.left is not None:
+            counter_with_backtracking += 1
+            
+        
+        dft_rec(current_node.right)
+        if is_found: 
+            return
+        if current_node.right is not None:
+            counter_with_backtracking += 1
+        
+
+    dft_rec(node)
+    
+    relative_height = get_relative_height(search_node, node)
+    
+    # counter_with_backtracking -= relative_height
+    
+    # print(f"Depth-first traversal completed. Distance: {counter}. With backtracking: {counter_with_backtracking}. Height: {relative_height}")
+    
+    return method_names, counter, counter_with_backtracking, relative_height
+
+
+def get_height(node: Node, height: int = 0) -> int:
+    if node.parent is None:
+        return height
+    return get_height(node=node.parent, height=height+1)
+
+def get_relative_height(node: Node, relative_parent: Node, height: int = 0) -> int:
+    if node == relative_parent:
+        return height
+    return get_relative_height(node.parent, relative_parent, height+1)
 
 def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     """Find all method chains in a tree using depth-first traversal.
@@ -91,32 +177,27 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     if node.left is None and node.right is None:
         return []
         
-    def dft_rec(current_node: Node, current_chain: list=[]):
+    def find_chains_starting_from(root_node: Node, current_node: Node = None):
         nonlocal chains
-        if current_node is None:
-            return
-
-        if node.left is None and node.right is None:
+        if current_node is None or root_node is None:
             return
         
-        # Add the current method name to the chain
-        current_chain.append(current_node.name)
-        
-        # As we want to get all chains, we append the current chain to the chains list
-        # Avoid adding single method chains
-        if len(current_chain) > 1: 
-            chains.append(current_chain.copy())
-        
+        if root_node != current_node:
+            chain, distance, distance_with_backtracking, distance_height = depth_first_search(root_node, current_node)
+            
+            chains.append({
+                "chain": chain,
+                "distance": distance,
+                "distance_with_backtracking": distance_with_backtracking,
+                "distance_height": distance_height,
+            })        
         
         # Traverse left and right children
-        dft_rec(current_node.left, current_chain)
-        dft_rec(current_node.right, current_chain)
-        
-        # # Backtrack to explore other branches
-        # current_chain.pop()
+        find_chains_starting_from(root_node, current_node.left)
+        find_chains_starting_from(root_node, current_node.right)
         
     # Start the depth-first traversal from the root node
-    dft_rec(node)
+    find_chains_starting_from(node, node)
 
     # As we are looking for ALL chains, we need to do the same operation for the subtrees of the root node
     find_all_valid_chains_depth_first(node.left, chains)
@@ -156,20 +237,25 @@ def find_all_invalid_chains_depth_first(node: Node, root: Node = None, chains: l
         return chains
     
     # Compute the size of the subtree rooted at the current node and get the chain associated with it 
-    chain_from_subtree, size_of_subtree = depth_first_traversal(node)
+    chain_from_subtree, size_of_subtree, size_of_subtree_with_backtracking, height = depth_first_traversal(node)
     # The distance of the invalid chain is the size of the subtree from this node (negative value)
     # since it is the number of methods that the LLM must check to determine if the chain is valid or not. 
     distance = -size_of_subtree
+    distance_with_backtracking = -size_of_subtree_with_backtracking
+    distance_height = height
         
     # Start the depth-first traversal from the root node
     unreachable_methods = find_list_of_unreachable_methods(node, root)
     
-    chains.append({
-        "node": node.name,
-        "unreachable_methods": unreachable_methods,
-        "distance": distance,
-        "chain": chain_from_subtree
-    })
+    if distance != 0:
+        chains.append({
+            "node": node.name,
+            "unreachable_methods": unreachable_methods,
+            "distance": distance,
+            "distance_with_backtracking": distance_with_backtracking,
+            "distance_height": distance_height,
+            "chain": chain_from_subtree
+        })
 
     # As we are looking for ALL chains, we need to do the same operation for the subtrees of the root node
     find_all_invalid_chains_depth_first(node=node.left, root=root, chains=chains)
@@ -195,7 +281,6 @@ def find_list_of_unreachable_methods(node: Node, root: Node) -> list:
 # Build a binary tree with a depth of 3 and method names
 
 """
-
 method_names = [
 "foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply",
 "waldo", "fred", "plugh", "xyzzy", "thud", "zedd", "last"
@@ -203,10 +288,6 @@ method_names = [
 tree = build_binary_tree(3, method_names)
 tree.print_tree()
 
-invalid_chains = find_all_invalid_chains_depth_first(tree)
-print("Invalid chains found:")
 
-for chain in invalid_chains:
-    print(f"Node: {chain['node']}, Unreachable methods: {chain['unreachable_methods']}, Distance: {chain['distance']}, Chain: {chain['chain']}")
-
+print(depth_first_search(tree, tree.right.right.right))
 """
