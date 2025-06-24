@@ -1,78 +1,15 @@
 import random
 from pathlib import Path
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import List, Tuple, Callable
 from abc import ABC, abstractmethod
 from math import ceil
-import prompts as p
+
+import prompts
 import control_flow
-import comments_generation as comments_generation
+import comments_generation
 import generate_tree_chains as gen_tree
-
-
-@dataclass
-class ExperimentConfig:
-    """Configuration for generating experiments"""
-    name: str
-    context_size: int
-    depths: List[int]
-    n_questions: int
-    n_padding: int = 0
-    n_comment_lines: int = 0
-    n_vars: int = 0
-    n_loops: int = 0
-    n_if: int = 0
-    time_limit: str = "1:00:00"
-    language: str = "java"  # Added language parameter
-    type: str = "linear"
-    
-    # Default values for experiments
-    DEFAULT_DIR_NAME = "default_test"
-    DEFAULT_EXP_TYPE = "linear"
-    DEFAULT_CTX_SIZE = 50
-    DEFAULT_DEPTHS = [1, 2, 3, 4, 5]
-    DEFAULT_N_QUESTIONS = 3
-    DEFAULT_N_PADDING = 2
-    DEFAULT_N_COMMENTS = 2
-    DEFAULT_N_LOOPS = 0
-    DEFAULT_N_IF = 0
-    DEFAULT_N_VARS = 0
-    DEFAULT_LANGUAGE = "java"
-    
-    def __str__(self) -> str:
-        return (
-            f"\n{'-'*46}\n"
-            f"Name:                 {self.name}\n"
-            f"Context Size:         {self.context_size}\n"
-            f"Depths:               {self.depths}\n"
-            f"Questions per depth:  {self.n_questions}\n"
-            f"Padding:              {self.n_padding}\n"
-            f"Comment Lines:        {self.n_comment_lines}\n"
-            f"Variables:            {self.n_vars}\n"
-            f"Loops:                {self.n_loops}\n"
-            f"If Statements:        {self.n_if}\n"
-            f"Time Limit:           {self.time_limit}\n"
-            f"Language:             {self.language}\n"
-            f"Type:                 {self.type}\n"
-            f"{'-'*46}"
-        )
-
-@dataclass
-class LinearCallExperimentConfig(ExperimentConfig):
-    pass
-@dataclass
-class TreeCallExperimentConfig(ExperimentConfig):
-    tree_depth: int = 3
-    n_tree: int = 3
-    calls_per_function: int = 2
-    type: str = "tree"
-    
-    @property
-    def n_method(self) -> int:
-        """Calcul automatique du nombre de méthodes d'un arbre"""
-        return self.n_tree * (self.calls_per_function**(self.tree_depth+1) - 1) // (self.calls_per_function - 1)
-
+from experiment_config import ExperimentConfig, LinearCallExperimentConfig, TreeCallExperimentConfig
 
 class MethodNameGenerator:
     """Base class for generating method/function names"""
@@ -144,8 +81,8 @@ class LanguageGenerator(ABC):
         pass
     
     @abstractmethod
-    def generate_class_from_multiple_trees(self, trees: list, method_names: list, 
-                                           selection: list, class_name: str ="TheClass") -> str:
+    def generate_class_from_multiple_trees(self, trees: list, method_names: list, selection: list,
+                                           config: TreeCallExperimentConfig, class_name: str ="TheClass") -> str:
         """Generate a class/module based on the trees generated"""
     
     @abstractmethod
@@ -175,13 +112,13 @@ class LanguageGenerator(ABC):
             if i < len(method_names) - 1:
                 # Generate content of the method body with control flow if necessary
                 method_body = control_flow.generate_method(caller_method=method,
-                                                            called_method=method_names[i+1],
+                                                            called_methods=[method_names[i+1]],
                                                             n_vars=config.n_vars,
                                                             n_loops=config.n_loops,
                                                             n_if=config.n_if)
             else:
                 method_body = control_flow.generate_method(caller_method=method,
-                                                           called_method=None,
+                                                           called_methods=None,
                                                            n_vars=config.n_vars,
                                                            n_loops=config.n_loops,
                                                            n_if=config.n_if)
@@ -221,8 +158,7 @@ class JavaGenerator(LanguageGenerator):
         
         return class_body
     
-    def generate_class_from_multiple_trees(self, trees: list, method_names: list, 
-                                           selection: list, class_name: str ="TheClass") -> str:
+    def generate_class_from_multiple_trees(self, trees: list, config: TreeCallExperimentConfig, class_name: str ="TheClass") -> str:
         """Generate a class with methods that call each other in a tree-like structure.
 
         Args:
@@ -230,7 +166,8 @@ class JavaGenerator(LanguageGenerator):
             tree_depth (int): The depth of the tree to be generated.
         """
         
-        method_bodies = gen_tree.generate_tree_method_calls(trees)
+        # method_bodies = gen_tree.generate_tree_method_calls(trees)
+        method_bodies = gen_tree.generate_tree_method_calls(trees=trees, config=config)
     
         print(f"Generated {len(method_bodies)} method bodies")
 
@@ -679,7 +616,7 @@ class ExperimentRunner:
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
-        self.file_writer.write_prompt_to_file(p.in_context, the_class, directory / "system.txt")
+        self.file_writer.write_prompt_to_file(prompts.in_context, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
@@ -729,12 +666,12 @@ class ExperimentRunner:
         print(f"Selected {len(selection)} questions")
         print(f"Questions per distance after selection: {self.count_distances(selection)}")
 
-        the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, method_names=method_names, selection=selection)
+        the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
 
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
-        self.file_writer.write_prompt_to_file(p.in_context_tree_calls, the_class, directory / "system.txt")
+        self.file_writer.write_prompt_to_file(prompts.in_context_tree_calls, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
@@ -808,8 +745,8 @@ class ExperimentRunner:
             print(f"\nGenerating {config.language} context of size {config.context_size} for {2*n_qs*len(config.depths)} questions")
             
             # Use language-specific chain generator
-            lang_generator = LanguageFactory.get_generator(config.language)
-            #chain_generator = lambda c: comments_generation.generate_chained_method_calls(c, config.n_comment_lines)
+            # lang_generator = LanguageFactory.get_generator(config.language)
+            # chain_generator = lambda c: comments_generation.generate_chained_method_calls(c, config.n_comment_lines)
             
             # first claude fix, disregarded and overlooking all the architectural stuff :-)
             # chain_generator = lang_generator.generate_chained_method_calls
@@ -874,9 +811,12 @@ class ExperimentRunner:
             depth_str = self._format_depths(config.depths)
             exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_var_{config.n_vars}_loop_{config.n_loops}_if_{config.n_if}_qs_{context_counter}_{config.language}"
             
+            
             # n_questions_generated = gen_tree.generate_exp(exp_dir, n_trees, tree_depth, max(config.depths), n_questions_left)
             n_questions_generated = self.generate_single_tree_context(exp_dir, n_trees, tree_depth, config, max(config.depths), n_questions_left)
             n_questions_left -= n_questions_generated
+            
+            print(f"\nGenerating {config.language} context of size {n_trees*methods_per_tree} for {2*n_questions_generated*len(config.depths)} questions")
 
             context_counter += 1
             

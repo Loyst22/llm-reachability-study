@@ -98,16 +98,17 @@ def random_loop(next_method: str = None, first_while: bool = True) -> tuple[str,
             
 """ Method body generation functions. """
 
-def generate_method_body(next_method: str = None,
+def generate_method_body(next_methods: list = None,
                         n_vars: int = 0,
                         n_loops: int = 0,
                         n_if: int = 0) -> str:
     """Generate a method body with simple control flow, declarations, and method calls.
     
     Args: 
-        called_method (str): name of the method being called
-        variables (list) : list of the variables being used
-        next_method (str) : name of the method being called
+        next_methods (list): list of names of methods being called
+        n_vars (int): number of variables to declare
+        n_loops (int): number of loops to include
+        n_if (int): number of if statements to include
         
     Returns: 
         str: Java method body with variable declarations, conditions, and method calls
@@ -131,10 +132,11 @@ def generate_method_body(next_method: str = None,
     # Add optional condition checks (like 'if' statements)
     for _ in range(n_if):  # Decide if we add a condition or not
         condition = random_condition(variables)
-        if next_method is None: 
+        if next_methods is None: 
             var = random.choice(variables)
-            control_flow.append(f"\tif ({condition}) {{\n\tSystem.out.println({var.name});\n\t}}")
+            control_flow.append(f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}")
         else:
+            next_method = random.choice(next_methods)
             control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
     
     first_while = True
@@ -142,7 +144,11 @@ def generate_method_body(next_method: str = None,
     
     # Add an optional loop (either a for loop or a while loop)
     for _ in range(n_loops):
-        loop_code, loop_type = random_loop(next_method, first_while)
+        if next_methods:
+            next_method = random.choice(next_methods)
+            loop_code, loop_type = random_loop(next_method, first_while)
+        else:
+            loop_code, loop_type = random_loop(None, first_while)
         
         # if it's the first while we wait to prepend it (for valid declaration)
         if first_while and loop_type == "while":
@@ -157,14 +163,15 @@ def generate_method_body(next_method: str = None,
     # Add the actual method call (to the next method in the chain)
     # ! Invalid version, it should call next_method or else it is recursive
     # body.append(f"\t{called_method}();")
-    if next_method is not None :
-        control_flow.append(f"\t{next_method}();")
+    if next_methods is not None :
+        for next_method in next_methods:
+            control_flow.append(f"\t{next_method}();")
     
     random.shuffle(control_flow)
     control_flow = to_prepend + control_flow
     body.extend(control_flow)
     
-    if next_method is None:
+    if next_methods is None:
         body.append(f"\t// End of chain")
     
     return "\n".join(body)
@@ -220,7 +227,7 @@ def generate_chained_method_calls(method_names: list) -> list:
     return method_bodies
 
 def generate_method(caller_method: str,
-                    called_method: str = None,
+                    called_methods: list = None,
                     n_vars: int = 0,
                     n_loops: int = 0,
                     n_if: int = 0) -> str:
@@ -228,13 +235,13 @@ def generate_method(caller_method: str,
 
     Args:
         caller_method (str): name of the caller method being generated
-        called_method (str): name of the method being called
+        called_methods (list): list of names of methods being called
         nvars (int): number of variables to declare in the method body
 
     Returns:
         str: Java method definition with a body that includes variable declarations
     """
-    body = generate_method_body(called_method, n_vars, n_loops, n_if)
+    body = generate_method_body(called_methods, n_vars, n_loops, n_if)
     return f"public void {caller_method}() {{\n{body}\n}}"
 
 def generate_full_class(nb_methods: int=15, n_loops: int=None, n_if: int=None, nb_chains: int=1):

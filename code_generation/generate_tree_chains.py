@@ -2,7 +2,10 @@ from pathlib import Path
 import random
 import generate_chain as gen
 import method_tree
-import prompts as p
+import prompts
+import comments_generation
+import control_flow
+from experiment_config import TreeCallExperimentConfig
 
 """
             Première idée :
@@ -122,7 +125,7 @@ def generate_many_call_trees(dir:str, tree_depth:int, n_trees:int):
         
     return trees, method_names
     
-def generate_tree_method_calls(trees:list):
+def generate_tree_method_calls(trees:list, config: TreeCallExperimentConfig):
     """Generate a list of Java method bodies that call each other in a tree like structure.
     Without comments.
 
@@ -136,12 +139,12 @@ def generate_tree_method_calls(trees:list):
     
     # Loop through each tree in the list of trees
     for tree in trees:
-        method_bodies += generate_tree_method_calls_rec(tree)
+        method_bodies += generate_tree_method_calls_rec(tree, config)
 
     return method_bodies    
 
 
-def generate_tree_method_calls_rec(tree:method_tree.Node):
+def generate_tree_method_calls_rec(tree: method_tree.Node, config: TreeCallExperimentConfig):
     """Generate the methods from the tree structure recursively.
 
     Args:
@@ -150,17 +153,34 @@ def generate_tree_method_calls_rec(tree:method_tree.Node):
     if tree is None:
         return []
     
-    method_bodies = [generate_single_method_body(tree)]
-    method_bodies += generate_tree_method_calls_rec(tree.left)
-    method_bodies += generate_tree_method_calls_rec(tree.right)
+    method_bodies = [generate_single_method_body(tree, config)]
+    method_bodies += generate_tree_method_calls_rec(tree.left, config)
+    method_bodies += generate_tree_method_calls_rec(tree.right, config)
     
     return method_bodies
 
-def generate_single_method_body(subtree:method_tree.Node):
+def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExperimentConfig):
+    if config.language.lower() != "java":
+        raise ValueError("Tree call experiments only supports Java language")
+    
+    comment = comments_generation.generate_lorem_ipsum_comments(config.n_comment_lines, config.language)
+    
     if subtree.left is None and subtree.right is None:
-        return f"    public void {subtree.name}() {{\n        // End of chain\n    }}"
+        method_body = control_flow.generate_method_body(next_methods=None,
+                                                   n_vars=config.n_vars,
+                                                   n_loops=config.n_loops,
+                                                   n_if=config.n_if)
+        # method_body = f"\tpublic void {subtree.name}() {{\n\t\t// End of chain\n\t}}"
     else: 
-        return f"    public void {subtree.name}() {{\n        {subtree.left.name}();\n        {subtree.right.name}();\n    }}"
+        method_body = control_flow.generate_method_body([subtree.left.name, subtree.right.name],
+                                                   config.n_vars,
+                                                   config.n_loops,
+                                                   config.n_if) 
+        # method_body = f"\tpublic void {subtree.name}() {{\n\t\t{subtree.left.name}();\n\t\t{subtree.right.name}();\n\t}}"
+
+    comment = "\t" + comment.replace("\n", "\n\t")
+    method_body = "\t" + method_body.replace("\n", "\n\t")
+    return f"{comment}\n\tpublic void {subtree.name}() {{\n{method_body}\n\t}}"
 
 
 def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list, method_names:list, selection:list):
@@ -193,7 +213,7 @@ def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list
     gen.write_methods_to_file(method_names,  dir / "methods.txt")  
     write_chains_to_file(selection, dir / "chains.txt")
     gen.write_questions_to_file(selection, dir / "reachability_questions.txt")
-    gen.write_prompt_to_file(p.in_context_tree_calls, class_body, dir / "system.txt")
+    gen.write_prompt_to_file(prompts.in_context_tree_calls, class_body, dir / "system.txt")
     
 def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None, n_questions:int = 100) -> int:
     """Generate an experiment with multiple trees and save the class to a file.
