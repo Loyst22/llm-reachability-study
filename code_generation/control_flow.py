@@ -91,7 +91,7 @@ def random_loop(next_method: str = None, first_while: bool = True) -> tuple[str,
             else:
                 return f"\tint counter = 0;\n\twhile (counter < 5) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"
         else:
-            if next_method:
+            if next_method is None:
                 return f"\tcounter = 0;\n\twhile (counter < 5) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
             else:
                 return f"\tcounter = 0;\n\twhile (counter < 5) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"                
@@ -117,6 +117,32 @@ def generate_method_body(next_methods: list = None,
     variables = []
     control_flow = []
     
+    if next_methods is None:
+        next_methods = []
+        
+    end_of_chain = not next_methods
+            
+    total_methods = len(next_methods)
+    methods_for_if = 0
+    
+    if total_methods > 0:
+        # Proportionally allocate methods to if and for
+        # this is done in order avoid having all method calls in if statements
+        total_blocks = n_if + n_loops
+        if total_blocks == 0:
+            total_blocks = 1 # Avoir division by 0
+            
+        methods_for_if = round(total_methods * (n_if/total_blocks))
+        
+        # Randomly split the methods into the two groups
+        random.shuffle(next_methods)
+        methods_in_if = next_methods[:methods_for_if]
+        methods_in_loops = next_methods[methods_for_if:]
+    
+    else:
+        methods_in_if = []
+        methods_in_loops = []
+    
     # Declare random variables (can be empty)
     for _ in range(n_vars):  # Random number of variables to declare
         var = random_variable()
@@ -132,20 +158,20 @@ def generate_method_body(next_methods: list = None,
     # Add optional condition checks (like 'if' statements)
     for _ in range(n_if):  # Decide if we add a condition or not
         condition = random_condition(variables)
-        if next_methods is None: 
+        if methods_in_if: 
+            next_method = methods_in_if.pop()
+            control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
+        else:
             var = random.choice(variables)
             control_flow.append(f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}")
-        else:
-            next_method = random.choice(next_methods)
-            control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
     
     first_while = True
     to_prepend = []
     
     # Add an optional loop (either a for loop or a while loop)
     for _ in range(n_loops):
-        if next_methods:
-            next_method = random.choice(next_methods)
+        if methods_in_loops:
+            next_method = methods_in_loops.pop()
             loop_code, loop_type = random_loop(next_method, first_while)
         else:
             loop_code, loop_type = random_loop(None, first_while)
@@ -158,20 +184,19 @@ def generate_method_body(next_methods: list = None,
         else:
             # next_method may be None of valid here : both work
             control_flow.append(loop_code)
-            
+    
+    remaining_methods = methods_in_if + methods_in_loops
                 
     # Add the actual method call (to the next method in the chain)
-    # ! Invalid version, it should call next_method or else it is recursive
-    # body.append(f"\t{called_method}();")
-    if next_methods is not None :
-        for next_method in next_methods:
+    if remaining_methods:
+        for next_method in remaining_methods:
             control_flow.append(f"\t{next_method}();")
     
     random.shuffle(control_flow)
     control_flow = to_prepend + control_flow
     body.extend(control_flow)
     
-    if next_methods is None:
+    if end_of_chain:
         body.append(f"\t// End of chain")
     
     return "\n".join(body)
