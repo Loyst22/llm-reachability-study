@@ -30,11 +30,11 @@ class ExperimentGUI:
                 ("Language", "language"),
             ],
             "linear": [],
-            "tree": [
-                ("Tree Depth", "tree_depth"),
-                ("Number of Trees", "n_tree"),
-                ("Calls per Function", "calls_per_function"),
-            ]
+            "tree": []
+            #     ("Tree Depth", "tree_depth"),
+            #     ("Number of Trees", "n_tree"),
+            #     ("Calls per Function", "calls_per_function"),
+            # ]
         }
 
         self.build_interface()
@@ -111,9 +111,9 @@ class ExperimentGUI:
                     type="linear"
                 )
             elif kind == "tree":
-                tree_depth = int(self.entries["tree_depth"].get() or 3)
-                n_tree = int(self.entries["n_tree"].get() or 3)
-                calls_per_function = int(self.entries["calls_per_function"].get() or 2)
+                # tree_depth = int(self.entries["tree_depth"].get() or 3)
+                # n_tree = int(self.entries["n_tree"].get() or 3)
+                # calls_per_function = int(self.entries["calls_per_function"].get() or 2)
 
                 config = TreeCallExperimentConfig(
                     name=name,
@@ -126,10 +126,10 @@ class ExperimentGUI:
                     n_if=n_if,
                     n_vars=n_vars,
                     language=language,
-                    type="tree",
-                    tree_depth=tree_depth,
-                    n_tree=n_tree,
-                    calls_per_function=calls_per_function
+                    type="tree"
+                    # tree_depth=tree_depth,
+                    # n_tree=n_tree,
+                    # calls_per_function=calls_per_function
                 )
             else:
                 raise ValueError("Unsupported experiment type")

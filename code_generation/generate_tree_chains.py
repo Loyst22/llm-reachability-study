@@ -209,7 +209,6 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     _, valid_questions = find_all_valid_chains(trees=trees)
     _, invalid_questions = find_all_invalid_chains(trees=trees)
     
-    selection = []
     
     # The maximum length of a chain is deduced from the tree depth
     if max_chain_length is None:
@@ -232,9 +231,7 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     selection = []
     
     for depth in range(max_chain_length + 1):
-        # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
         selection.extend(gen.select_n_of_distance(valid_questions, depth, min_amount_of_questions))
-        # TODO : see if we can manage to get negative questions for all distances
         selection.extend(gen.select_n_of_distance(invalid_questions, -depth, min_amount_of_questions))
     
     print(f"Selected {len(selection)} questions")
@@ -346,7 +343,8 @@ def write_chains_to_file(questions:list, filename:str):
         for question, dist, chain in questions:
             file.write(" ".join(chain) + '\n')  # Write each chain on a new line
 
-# Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
-# generate_exp(exp_name="tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
-# Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
-# generate_exp(exp_name="experiments/large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)
+if __name__ == '__main__':
+    # Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
+    generate_exp(exp_name="experiments/tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
+    # Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
+    generate_exp(exp_name="experiments/large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)

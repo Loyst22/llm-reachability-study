@@ -144,6 +144,11 @@ class LanguageGenerator(ABC):
         pass
     
     @abstractmethod
+    def generate_class_from_multiple_trees(self, trees: list, method_names: list, 
+                                           selection: list, class_name: str ="TheClass") -> str:
+        """Generate a class/module based on the trees generated"""
+    
+    @abstractmethod
     def get_file_extension(self) -> str:
         """Get the file extension for this language"""
         pass
@@ -210,6 +215,29 @@ class JavaGenerator(LanguageGenerator):
         
         random.shuffle(method_bodies)
         
+        class_body = f"public class {class_name} {{\n"
+        class_body += "\n\n".join(method_bodies)
+        class_body += "\n}"
+        
+        return class_body
+    
+    def generate_class_from_multiple_trees(self, trees: list, method_names: list, 
+                                           selection: list, class_name: str ="TheClass") -> str:
+        """Generate a class with methods that call each other in a tree-like structure.
+
+        Args:
+            directory (str): The directory where the generated files will be saved.
+            tree_depth (int): The depth of the tree to be generated.
+        """
+        
+        method_bodies = gen_tree.generate_tree_method_calls(trees)
+    
+        print(f"Generated {len(method_bodies)} method bodies")
+
+        # Shuffle the method bodies to create random order in the class
+        random.shuffle(method_bodies)
+
+        # Construct the class with shuffled method bodies
         class_body = f"public class {class_name} {{\n"
         class_body += "\n\n".join(method_bodies)
         class_body += "\n}"
@@ -502,11 +530,18 @@ class FileWriter:
                 f.write(f"{dist}\t{question}\n")
 
     @staticmethod
-    def write_chains_to_file(questions: List[Tuple], filename: Path) -> None:
+    def write_chains_to_file(questions: List[Tuple], filename: Path, config: ExperimentConfig) -> None:
         """Write all chains from the questions list to a file"""
-        with open(filename, 'w') as f:
-            for question, dist, chain, back_chain in questions:
-                f.write(" ".join(chain) + '\t' + " ".join(back_chain) + '\n')
+        if config.type == "linear":
+            with open(filename, 'w') as f:
+                for question, dist, chain, back_chain in questions:
+                    f.write(" ".join(chain) + '\t' + " ".join(back_chain) + '\n')
+        elif config.type == "tree":
+            with open(filename, 'w') as file:
+                for question, dist, chain in questions:
+                    file.write(" ".join(chain) + '\n')
+        else :
+            raise ValueError(f"Unknow experiment type: {config.type}")
 
     @staticmethod
     def write_methods_to_file(methods: List[str], filename: Path) -> None:
@@ -595,7 +630,7 @@ class ExperimentRunner:
             count_dict[item[1]] += 1
         return count_dict
 
-    def generate_single_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
+    def generate_single_linear_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
                                chain_generator: Callable, config: LinearCallExperimentConfig) -> None:
         """Generate a single context with specified parameters"""
         # print(f"Generating {config.language} class with {config.context_size} methods")
@@ -646,8 +681,65 @@ class ExperimentRunner:
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
         self.file_writer.write_prompt_to_file(p.in_context, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
-        self.file_writer.write_chains_to_file(selection, directory / "chains.txt")
+        self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
+        
+    def generate_single_tree_context(self, directory:str, n_trees:int, tree_depth:int, config:TreeCallExperimentConfig, max_chain_length:int = None, n_questions:int = 100) -> int:
+        """Generate an experiment with multiple trees and save the class to a file.
+
+        Args:
+            directory (str): The name of the experiment.
+            n_trees (int): The number of trees to generate.
+            tree_depth (int): The depth of each tree.
+        """        
+        lang_generator = LanguageFactory.get_generator(config.language)
+        
+        print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {directory}")
+        trees, method_names = gen_tree.generate_many_call_trees(directory, tree_depth, n_trees)
+        print(f"Generated {len(trees)} trees")
+        _, valid_questions = gen_tree.find_all_valid_chains(trees=trees)
+        _, invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
+       
+        selection = []
+       
+        # The maximum length of a chain is deduced from the tree depth
+        if max_chain_length is None:
+            max_chain_length = (2**(tree_depth + 1) - 1)
+        
+        for depth in range(max_chain_length + 1):
+            # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
+            selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, n_questions))
+            # TODO : see if we can manage to get negative questions for all distances
+            selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, n_questions))
+        
+        distance_dict = self.count_distances(selection)
+    
+        min_amount_of_questions = n_questions
+
+        for value in distance_dict.values():
+            if value < min_amount_of_questions:
+                min_amount_of_questions = value
+
+        selection = []
+        
+        for depth in range(max_chain_length + 1):
+            selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, min_amount_of_questions))
+            selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, min_amount_of_questions))
+    
+        print(f"Selected {len(selection)} questions")
+        print(f"Questions per distance after selection: {self.count_distances(selection)}")
+
+        the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, method_names=method_names, selection=selection)
+
+        # Use language-specific file extension
+        class_filename = f"TheClass{lang_generator.get_file_extension()}"
+        self.file_writer.write_class_to_file(the_class, directory / class_filename)
+        self.file_writer.write_prompt_to_file(p.in_context_tree_calls, the_class, directory / "system.txt")
+        self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
+        self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
+        self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
+        
+        return min_amount_of_questions
 
     def generate_experiment(self, config: ExperimentConfig) -> List[Path]:
         """Generate an experiment based on configuration (and its type)"""
@@ -725,7 +817,7 @@ class ExperimentRunner:
             # chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
             chain_generator = lambda c: LanguageGenerator.chain_generator(method_names=c, config=config)
             
-            self.generate_single_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
+            self.generate_single_linear_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
             
             directories.append(exp_dir)
             n_questions_left -= n_chains_in_context
@@ -750,7 +842,6 @@ class ExperimentRunner:
         Returns:
             list: List of directories where the experiments were generated
         """
-        # TODO !! 
         base_dir = Path(config.name)
         directories = []
         
@@ -783,7 +874,8 @@ class ExperimentRunner:
             depth_str = self._format_depths(config.depths)
             exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_var_{config.n_vars}_loop_{config.n_loops}_if_{config.n_if}_qs_{context_counter}_{config.language}"
             
-            n_questions_generated = gen_tree.generate_exp(exp_dir, n_trees, tree_depth, max(config.depths), n_questions_left)
+            # n_questions_generated = gen_tree.generate_exp(exp_dir, n_trees, tree_depth, max(config.depths), n_questions_left)
+            n_questions_generated = self.generate_single_tree_context(exp_dir, n_trees, tree_depth, config, max(config.depths), n_questions_left)
             n_questions_left -= n_questions_generated
 
             context_counter += 1
