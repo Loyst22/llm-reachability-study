@@ -431,14 +431,19 @@ class QuestionGenerator:
                     start_back_chain = max(0, i - len(chain))
                     back_chain = method_names[start_back_chain:i]
                     
-                    questions_with_distances_and_chains.append((question, distance, chain, back_chain))
+                    questions_with_distances_and_chains.append({
+                        "question": question,
+                        "distance": distance,
+                        "chain": chain,
+                        "back_chain": back_chain
+                    })
         
         return questions_with_distances_and_chains
 
     @staticmethod
     def select_questions_by_distance(questions_with_distances: List[Tuple], distance: int, n: int) -> List[Tuple]:
         """Select up to n questions with a specified distance"""
-        filtered = [q for q in questions_with_distances if q[1] == distance]
+        filtered = [q for q in questions_with_distances if q["distance"] == distance]
         return random.sample(filtered, min(n, len(filtered)))
 
 
@@ -461,22 +466,23 @@ class FileWriter:
 
     @staticmethod
     def write_questions_to_file(questions_with_distances: List[Tuple], filename: Path) -> None:
-        """Write questions to file, one per line"""
+        """Writes the questions to a file, one per line."""
         with open(filename, 'w') as f:
-            for question, dist, *rest in questions_with_distances:
-                f.write(f"{dist}\t{question}\n")
+            for item in questions_with_distances:
+                # Write only the question (ignoring the distance) to the file
+                f.write(f"{item['distance']}\t{item['question']}\n")
 
     @staticmethod
     def write_chains_to_file(questions: List[Tuple], filename: Path, config: ExperimentConfig) -> None:
         """Write all chains from the questions list to a file"""
         if config.type == "linear":
             with open(filename, 'w') as f:
-                for question, dist, chain, back_chain in questions:
-                    f.write(" ".join(chain) + '\t' + " ".join(back_chain) + '\n')
+                for item in questions:
+                    f.write(" ".join(item['chain']) + '\t' + " ".join(item['back_chain']) + '\n')
         elif config.type == "tree":
             with open(filename, 'w') as file:
-                for question, dist, chain in questions:
-                    file.write(" ".join(chain) + '\n')
+                for item in questions:
+                    file.write(" ".join(item['chain']) + '\n')
         else :
             raise ValueError(f"Unknow experiment type: {config.type}")
 
@@ -564,7 +570,7 @@ class ExperimentRunner:
         """Count occurrences of each distance"""
         count_dict = defaultdict(int)
         for item in tuples_list:
-            count_dict[item[1]] += 1
+            count_dict[item["distance"]] += 1
         return count_dict
 
     def generate_single_linear_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
@@ -634,8 +640,8 @@ class ExperimentRunner:
         print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {directory}")
         trees, method_names = gen_tree.generate_many_call_trees(directory, tree_depth, n_trees)
         print(f"Generated {len(trees)} trees")
-        _, valid_questions = gen_tree.find_all_valid_chains(trees=trees)
-        _, invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
+        valid_questions = gen_tree.find_all_valid_chains(trees=trees)
+        invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
         
         selection = []
        

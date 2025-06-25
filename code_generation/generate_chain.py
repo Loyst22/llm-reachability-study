@@ -154,11 +154,14 @@ def select_n_of_distance(questions_with_distances_maybe_chain:list, distance:int
     # Randomly sample up to `n` questions from the filtered list
     return random.sample(filtered_questions, min(n, len(filtered_questions)))
 
-def count_distances(tuples_list:list):
-    """Count the occurrences of each distance in a list of tuples.
+def count_distances(dict_list:list):
+    """Count the occurrences of each distance in a list of dictionary.
 
     Args:
-        tuples_list (list): A list of tuples, where each tuple contains a question, its distance, and possibly a chain.
+        dict_list (list): A list of dictionary, where each item contains:
+                            - a question
+                            - the associated distances (calculed with the different heuristics)
+                            - possibly a chain
 
     Returns:
         dictionary: A dictionary where keys are distances and values are the counts of those distances.
@@ -166,9 +169,9 @@ def count_distances(tuples_list:list):
     count_dict = defaultdict(int)
     
     # Iterate over each tuple in the list
-    for item in tuples_list:
+    for item in dict_list:
         # Retrieve the distance from the tuple
-        dist = item[1]
+        dist = item["distance"]
         # Increment the count for this last item
         count_dict[dist] += 1
     
@@ -180,9 +183,9 @@ def count_distances(tuples_list:list):
 def write_questions_to_file(questions_with_distances:list, filename:str):
     """Writes the questions to a file, one per line."""
     with open(filename, 'w') as f:
-        for question, dist, *rest in questions_with_distances:
+        for item in questions_with_distances:
             # Write only the question (ignoring the distance) to the file
-            f.write(f"{dist}\t{question}\n")
+            f.write(f"{item['distance']}\t{item['question']}\n")
 
 def write_class_to_file(body:str, filename:str):
     """Writes the questions to a file, one per line."""
@@ -319,7 +322,12 @@ def generate_call_questions_with_distances_and_chains_new(method_names:list):
                 back_chain = method_names[start_back_chain: end_back_chain]
                 
                 # Add the question, distance, and chain to the output list
-                questions_with_distances_and_chains.append((question, distance, chain, back_chain))
+                questions_with_distances_and_chains.append({
+                    "question": question,
+                    "distance": distance,
+                    "chain": chain,
+                    "back_chain": back_chain
+                })
     
     return questions_with_distances_and_chains
 

@@ -231,8 +231,8 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {exp_name}")
     trees, method_names = generate_many_call_trees(exp_name, tree_depth, n_trees)
     print(f"Generated {len(trees)} trees")
-    _, valid_questions = find_all_valid_chains(trees=trees)
-    _, invalid_questions = find_all_invalid_chains(trees=trees)
+    valid_questions = find_all_valid_chains(trees=trees)
+    invalid_questions = find_all_invalid_chains(trees=trees)
     
     
     # The maximum length of a chain is deduced from the tree depth
@@ -283,13 +283,12 @@ def find_all_valid_chains(trees:list) -> tuple[list, list]:
     
     print(f"Total valid chains found: {len(all_valid_chains)}")
     
-    questions_with_distances_and_chains = generate_questions_from_valid_chains(all_valid_chains)
-    # print(f"Questions generated from valid chains: {questions_with_distances_and_chains}")
+    generate_questions_from_valid_chains(all_valid_chains)
     
-    chain_distances = gen.count_distances(questions_with_distances_and_chains)
+    chain_distances = gen.count_distances(all_valid_chains)
     print(f"Chain distances: {chain_distances}")
     
-    return all_valid_chains, questions_with_distances_and_chains
+    return all_valid_chains
 
 # ! We should not try to find ALL invalid chains, as it would be too costly in terms of time and resources.
 def find_all_invalid_chains(trees:list) -> tuple[list, list]:
@@ -312,21 +311,20 @@ def find_all_invalid_chains(trees:list) -> tuple[list, list]:
     
     # print(f"Invalid chains: {all_invalid_chains}")
     
-    questions_with_distances_and_chains = generate_questions_from_invalid_chains(all_invalid_chains)
+    generate_questions_from_invalid_chains(all_invalid_chains)
     
-    chain_distances = gen.count_distances(questions_with_distances_and_chains)
+    chain_distances = gen.count_distances(all_invalid_chains)
     print(f"Chain distances: {chain_distances}")
     
-    return all_invalid_chains, questions_with_distances_and_chains
+    return all_invalid_chains
 
-def generate_questions_from_valid_chains(chains:list, max_chain_length:int = None) -> list:
+def generate_questions_from_valid_chains(chains:list, max_chain_length:int = None):
     """Generate questions from valid chains.
 
     Args:
         chains (list): A list of valid chains to generate questions from.
         max_chain_length (int): The maximum length of the chains to consider.
     """
-    questions_with_distances_and_chains = []
     for item in chains:
         if max_chain_length is None or item["distance"] <= max_chain_length:
             chain = item["chain"]
@@ -334,11 +332,9 @@ def generate_questions_from_valid_chains(chains:list, max_chain_length:int = Non
                 f"Does `{chain[0]}` call `{chain[-1]}`, either directly or indirectly? "
                 f"Think step-by-step by following the method calls from `{chain[0]}`."
             )
+            item["question"] = question          
             
-            distance = item["distance"]
-            
-            questions_with_distances_and_chains.append((question, distance, chain))
-    return questions_with_distances_and_chains
+    return
 
 def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = None) -> list:
     """Generate questions from invalid chains.
@@ -347,7 +343,6 @@ def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = N
         chains (list): A list of invalid chains to generate questions from.
         max_chain_length (int): The maximum length of the chains to consider.
     """
-    questions_with_distances_and_chains = []
     
     # TODO : à vérifier
     for item in chains:
@@ -358,12 +353,10 @@ def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = N
                     f"Does `{item['node']}` call `{unreachable}`, either directly or indirectly? "
                     f"Think step-by-step by following the method calls from `{item['node']}`."
                 )
-                distance = item["distance"]
-                chain = item["chain"]
+                
+                item["question"] = question          
 
-                questions_with_distances_and_chains.append((question, distance, chain))
-        
-    return questions_with_distances_and_chains
+    return
 
 def write_chains_to_file(questions:list, filename:str):
     """Write all chains from the questions list to a file, one per line."""

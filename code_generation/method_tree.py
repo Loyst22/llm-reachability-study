@@ -35,14 +35,14 @@ def write_trees_to_files(trees: list, dir: str):
     Path(f"{dir}/tree_structures").mkdir(parents=True, exist_ok=True)
     cumulative_file = f"{dir}/tree_structures/all_tree_structures_0--{len(trees)-1}.txt"
 
-    with open(cumulative_file, 'w') as cum_f:
+    with open(cumulative_file, 'w') as file:
         for idx, tree in enumerate(trees):
             individual_path = f"{dir}/tree_structures/tree_structure_{idx}.txt"
             tree.write_tree_to_file(individual_path)
 
-            cum_f.write(f"\n{'='*20} Tree {idx} {'='*20}\n\n")
+            file.write(f"\n{'='*20} Tree {idx} {'='*20}\n\n")
             with open(individual_path, 'r') as tree_f:
-                cum_f.write(tree_f.read())
+                file.write(tree_f.read())
 
 def build_binary_tree(depth: int, method_names: list, index: int = 0, parent: Node = None) -> Node:
     """Build a binary tree from a list of method names.
