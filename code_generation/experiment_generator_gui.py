@@ -94,6 +94,9 @@ class ExperimentGUI:
             n_if = int(self.entries["n_if"].get() or ExperimentConfig.DEFAULT_N_IF)
             n_vars = int(self.entries["n_vars"].get() or ExperimentConfig.DEFAULT_N_VARS)
             language = self.entries["language"].get() or ExperimentConfig.DEFAULT_LANGUAGE
+            
+            if n_if != 0 and n_loops != 0 and n_vars == 0:
+                n_vars = 1
 
             # Add type-specific config
             if kind == "linear":

@@ -2,6 +2,7 @@
 __pycache__
 *.slurm
 a_faire.txt
+issues.txt
 
 # Ignore generated files
 experiments

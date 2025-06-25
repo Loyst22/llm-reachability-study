@@ -46,7 +46,7 @@ def random_variable() -> Variable:
     return Variable(var_name, var_type, value)
 
 
-def random_condition(variables: list) -> list:
+def random_true_condition(variables: list) -> str:
     """Generate a simple condition that always evaluates to True using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
@@ -54,20 +54,55 @@ def random_condition(variables: list) -> list:
     # Generate conditions based on variable type, ensuring they are always true
     if var.var_type == "int" or var.var_type == "long":
         # For int, ensure the condition is true based on the value of the variable
+        delta = random.randint(1, 5) # To avoid situation like 5 <= 5...
         if var.value <= 5:
-            return f"{var.name} <= {var.value}"  # x <= 5 where x is <= 5
+            return f"{var.name} <= {var.value + delta}"  # x <= x + delta where x is <= value
         else:
-            return f"{var.name} >= {var.value}"  # x >= 5 where x is > 5
+            return f"{var.name} >= {var.value - delta}"  # x >= x - delta where x is > value
     elif var.var_type == "boolean":
         # For boolean, create a condition that evaluates to true
-        java_value = str(var.value).lower()
-        return f"{var.name} == {java_value}"
+        if random.random() < 0.5:
+            java_value = str(var.value).lower()
+            return f"{var.name} == {java_value}"
+        else:
+            not_java_value = str(not var.value).lower()
+            return f"{var.name} != {not_java_value}"
     elif var.var_type == "double":
         # For double, ensure the condition is true based on the value of the variable
+        delta = random.uniform(1, 5)
         if var.value <= 5.0:
-            return f"{var.name} <= {var.value}"  # z <= value where z <= value
+            return f"{var.name} <= {var.value + delta}"  # z <= z + delta where z <= 5
         else:
-            return f"{var.name} >= {var.value}"  # z >= value where z > value
+            return f"{var.name} >= {var.value - delta}"  # z >= z - delta where z > 5
+        
+def random_false_condition(variables: list) -> str:
+    """Generate a simple condition that always evaluates to False using declared variables."""
+    # Choose a random variable
+    var = random.choice(variables)
+    
+    # Generate conditions based on variable type, ensuring they are always false
+    if var.var_type == "int" or var.var_type == "long":
+        # For int, ensure the condition is false based on the value of the variable
+        delta = random.randint(1, 5) 
+        if var.value <= 5:
+            return f"{var.name} <= {var.value - delta}"  # x <= x - delta where x is <= 5
+        else:
+            return f"{var.name} >= {var.value + delta}"  # x >= x + delta where x is > 5
+    elif var.var_type == "boolean":
+        # For boolean, create a condition that evaluates to false
+        if random.random() < 0.5:
+            not_java_value = str(not var.value).lower()
+            return f"{var.name} == {not_java_value}"
+        else:
+            java_value = str(var.value).lower()
+            return f"{var.name} != {java_value}"
+    elif var.var_type == "double":
+        # For double, ensure the condition is false based on the value of the variable
+        delta = random.uniform(1, 5)
+        if var.value <= 5.0:
+            return f"{var.name} <= {var.value - delta}"  # z <= z - delta where z <= 5
+        else:
+            return f"{var.name} >= {var.value + delta}"  # z >= z + delta where z > 5
     
 def method_call(called_method: str) -> str:
     """Generate the next method call using the given method name."""
@@ -76,7 +111,7 @@ def method_call(called_method: str) -> str:
     else:
         return f"\t{called_method}();"
 
-def random_loop(next_method: str = None, first_while: bool = True) -> tuple[str, str]:
+def random_loop(next_method: str = None, nb_while: int = 0) -> tuple[str, str]:
     """Generate a random for or while loop."""
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
@@ -85,16 +120,16 @@ def random_loop(next_method: str = None, first_while: bool = True) -> tuple[str,
         else:
             return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t{method_call(next_method)}\n\t}}", "for"
     else:  # while loop
-        if first_while:
+        if nb_while == 0:
             if next_method is None:
-                return f"\tint counter = 0;\n\twhile (counter < 5) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
+                return f"\tint counter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
             else:
-                return f"\tint counter = 0;\n\twhile (counter < 5) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"
+                return f"\tint counter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"
         else:
             if next_method is None:
-                return f"\tcounter = 0;\n\twhile (counter < 5) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
+                return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
             else:
-                return f"\tcounter = 0;\n\twhile (counter < 5) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"                
+                return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"                
             
 """ Method body generation functions. """
 
@@ -117,29 +152,6 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
     if next_methods is None:
         next_methods = []
         
-    end_of_chain = not next_methods
-            
-    total_methods = len(next_methods)
-    methods_for_if = 0
-    
-    if total_methods > 0:
-        # Proportionally allocate methods to if and for
-        # this is done in order avoid having all method calls in if statements
-        total_blocks = n_if + n_loops
-        if total_blocks == 0:
-            total_blocks = 1 # Avoir division by 0
-            
-        methods_for_if = round(total_methods * (n_if/total_blocks))
-        
-        # Randomly split the methods into the two groups
-        random.shuffle(next_methods)
-        methods_in_if = next_methods[:methods_for_if]
-        methods_in_loops = next_methods[methods_for_if:]
-    
-    else:
-        methods_in_if = []
-        methods_in_loops = []
-    
     # Declare random variables (can be empty)
     for _ in range(n_vars):  # Random number of variables to declare
         var = random_variable()
@@ -152,45 +164,49 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
         else:    
             body.append(f"\t{var.var_type} {var.name} = {var.value};")
     
-    # Add optional condition checks (like 'if' statements)
-    for _ in range(n_if):  # Decide if we add a condition or not
-        condition = random_condition(variables)
-        if methods_in_if: 
-            next_method = methods_in_if.pop()
-            control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
-        else:
-            var = random.choice(variables)
-            control_flow.append(f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}")
+    end_of_chain = not next_methods
+            
+    total_methods = len(next_methods)
+    n_plain = max(0, total_methods - (n_if + n_loops))
+    control_flow_types = ["if"] * n_if + ["loop"] * n_loops
+    random.shuffle(control_flow_types)
+    control_flow_types += n_plain * ["plain"]
     
-    first_while = True
-    to_prepend = []
+    nb_while = 0
     
-    # Add an optional loop (either a for loop or a while loop)
-    for _ in range(n_loops):
-        if methods_in_loops:
-            next_method = methods_in_loops.pop()
-            loop_code, loop_type = random_loop(next_method, first_while)
-        else:
-            loop_code, loop_type = random_loop(None, first_while)
+    for type in control_flow_types:
+        if type == "if":
+            condition = random_true_condition(variables)
+            if next_methods:
+                next_method = next_methods.pop(0)
+                control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
+            else:
+                var = random.choice(variables)
+                control_flow.append(f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}")
         
-        # if it's the first while we wait to prepend it (for valid declaration)
-        if first_while and loop_type == "while":
-            to_prepend.append(loop_code)
-            first_while = False
-
-        else:
+        if type == "loop":
+            if next_methods:
+                next_method = next_methods.pop(0)
+                loop_code, loop_type = random_loop(next_method, nb_while)
+            else:
+                loop_code, loop_type = random_loop(None, nb_while)
+            
+            # if it's the first while we wait to prepend it (for valid declaration)
+            if loop_type == "while":
+                nb_while += 1
+            
             # next_method may be None of valid here : both work
             control_flow.append(loop_code)
-    
-    remaining_methods = methods_in_if + methods_in_loops
+        
+        if type == "plain":
+            if next_methods:
+                next_method = next_methods.pop(0)
+                control_flow.append(f"\t{next_method}();")
                 
-    # Add the actual method call (to the next method in the chain)
-    if remaining_methods:
-        for next_method in remaining_methods:
-            control_flow.append(f"\t{next_method}();")
-    
-    random.shuffle(control_flow)
-    control_flow = to_prepend + control_flow
+            else:
+                raise ValueError("Weird error...")
+        
+        
     body.extend(control_flow)
     
     if end_of_chain:

@@ -14,6 +14,8 @@ from experiment_config import ExperimentConfig, LinearCallExperimentConfig, Tree
 class MethodNameGenerator:
     """Base class for generating method/function names"""
     
+    # There are 38 verbs, 49 nouns, and 45 complements.
+    # This gives us a total of 38 * 49 * 45 = 83,790 unique method names.
     PREFIXES = [
         "get", "set", "is", "calculate", "process", "fetch", "update", "create", "delete", 
         "find", "check", "load", "save", "reset", "clear", "validate", "initialize", 

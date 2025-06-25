@@ -223,7 +223,6 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     # This is because for each level k, we have 2^k nodes, and each node can have 2^{h+1-k} - 2 chains.
     # The total number of chains is the sum of all chains from all levels. 
     
-    print("Here are the chains: ", chains)    
     return chains
     
 def find_all_invalid_chains_depth_first(node: Node, root: Node = None, chains: list = None) -> list:
