@@ -469,8 +469,12 @@ class FileWriter:
         """Writes the questions to a file, one per line."""
         with open(filename, 'w') as f:
             for item in questions_with_distances:
-                # Write only the question (ignoring the distance) to the file
-                f.write(f"{item['distance']}\t{item['question']}\n")
+                to_write = [str(item["distance"]), item["question"]]
+                if "distance_with_backtracking" in item:
+                    to_write.append(str(item["distance_with_backtracking"]))
+                if "distance_height" in item:
+                    to_write.append(str(item["distance_height"]))
+                f.write('\t'.join(to_write) + '\n')
 
     @staticmethod
     def write_chains_to_file(questions: List[Tuple], filename: Path, config: ExperimentConfig) -> None:

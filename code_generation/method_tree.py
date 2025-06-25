@@ -121,12 +121,12 @@ def depth_first_search(node: Node, search_node: Node):
     """
     
     method_names = []
-    counter = 0
-    counter_with_backtracking = 0
+    distance = 0
+    distance_with_backtracking = 0
     is_found = False
     
     def dft_rec(current_node: Node):
-        nonlocal counter, counter_with_backtracking, is_found
+        nonlocal distance, distance_with_backtracking, is_found
         if current_node is None or is_found:
             return
         
@@ -136,32 +136,32 @@ def depth_first_search(node: Node, search_node: Node):
             is_found = True
             return
         
-        counter += 1
-        counter_with_backtracking += 1
+        distance += 1
+        distance_with_backtracking += 1
         
         dft_rec(current_node.left)
         if is_found: 
             return
         if current_node.left is not None:
-            counter_with_backtracking += 1
+            distance_with_backtracking += 1
             
         
         dft_rec(current_node.right)
         if is_found: 
             return
         if current_node.right is not None:
-            counter_with_backtracking += 1
+            distance_with_backtracking += 1
         
 
     dft_rec(node)
     
     relative_height = get_relative_height(search_node, node)
     
-    # counter_with_backtracking -= relative_height
+    # distance_with_backtracking -= relative_height
     
-    # print(f"Depth-first traversal completed. Distance: {counter}. With backtracking: {counter_with_backtracking}. Height: {relative_height}")
+    # print(f"Depth-first traversal completed. Distance: {distance}. With backtracking: {distance_with_backtracking}. Height: {relative_height}")
     
-    return method_names, counter, counter_with_backtracking, relative_height
+    return method_names, distance, distance_with_backtracking, relative_height
 
 
 def get_height(node: Node, height: int = 0) -> int:
