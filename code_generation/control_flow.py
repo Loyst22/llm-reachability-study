@@ -98,10 +98,7 @@ def random_loop(next_method: str = None, first_while: bool = True) -> tuple[str,
             
 """ Method body generation functions. """
 
-def generate_method_body(next_methods: list = None,
-                        n_vars: int = 0,
-                        n_loops: int = 0,
-                        n_if: int = 0) -> str:
+def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: int = 0, n_if: int = 0) -> str:
     """Generate a method body with simple control flow, declarations, and method calls.
     
     Args: 
@@ -251,11 +248,7 @@ def generate_chained_method_calls(method_names: list) -> list:
     
     return method_bodies
 
-def generate_method(caller_method: str,
-                    called_methods: list = None,
-                    n_vars: int = 0,
-                    n_loops: int = 0,
-                    n_if: int = 0) -> str:
+def generate_method(caller_method: str, called_methods: list = None, n_vars: int = 0, n_loops: int = 0, n_if: int = 0) -> str:
     """Generate a method that calls another method with a specified number of variables.
 
     Args:

@@ -7,9 +7,7 @@ import comments_generation
 import control_flow
 from experiment_config import TreeCallExperimentConfig
 
-"""
-            Première idée :
-            
+"""            
                                                               ┌────────────────┐
                                                    ┌─────────►│   Fonction 4   │
                                                    │          └────────────────┘
@@ -35,20 +33,20 @@ from experiment_config import TreeCallExperimentConfig
                                                               └────────────────┘
 
            ─────────────────────────────────────────────────────────────────────
-                                  Chaînes de taille 3 max
+                                  Chaînes de taille 2 max
 
 
 Pour une taille de chaîne maximale donnée (noté n) il en découle une taille de contexte
-minimale (nombre minimal de fonctions) : 2^n - 1
+minimale (nombre minimal de fonctions) : 2^{n+1} - 1
 
-──►  Une taille de chaîne maximale de 7 donne un nombre de fonctions égal à 127.
+──►  Une taille de chaîne maximale de 6 donne un nombre de fonctions égal à 127.
 
-Par ailleurs cela donne 2^(n-1) chaînes de taille maximale n, 2^(n-2) chaînes de taille n-1
+Par ailleurs cela donne 2^n chaînes de taille maximale n 
 
-──►  Dans l'exemple vu plus haut on a bien 2^2=4 chaînes de taille maximale (3) ce qui correspond
+──►  Dans l'exemple vu plus haut on a bien 2^2=4 chaînes de taille maximale (2) ce qui correspond
      au nombre de feuilles dans un arbre binaire complet
 
-Cela a pour conséquence que la taille du contexte et le nombre de chaînes sont liés ou se bornent
+Cela a pour conséquence que la taille du contexte et la taille des chaînes sont liées ou se bornent
 
 
 Le raisonnement attendu pour un LLM doit-il prendre en compte le backtracking en détail ?
@@ -120,12 +118,14 @@ def generate_many_call_trees(dir:str, tree_depth:int, n_trees:int):
         tree = generate_single_call_tree_from_names(tree_depth, method_names[i * (2**(tree_depth + 1) - 1):(i + 1) * (2**(tree_depth + 1) - 1)])
         trees.append(tree)
         
-    for tree in trees:
-        tree.write_tree_to_file(f"{dir}/tree_structures/tree_structure_{trees.index(tree)}.txt")
+    method_tree.write_trees_to_files(trees, dir)
+    
+    # for tree in trees:
+    #     tree.write_tree_to_file(f"{dir}/tree_structures/tree_structure_{trees.index(tree)}.txt")
         
     return trees, method_names
     
-def generate_tree_method_calls(trees:list, config: TreeCallExperimentConfig):
+def generate_tree_method_calls(trees:list, config: TreeCallExperimentConfig = None):
     """Generate a list of Java method bodies that call each other in a tree like structure.
     Without comments.
 
@@ -144,7 +144,7 @@ def generate_tree_method_calls(trees:list, config: TreeCallExperimentConfig):
     return method_bodies    
 
 
-def generate_tree_method_calls_rec(tree: method_tree.Node, config: TreeCallExperimentConfig):
+def generate_tree_method_calls_rec(tree: method_tree.Node, config: TreeCallExperimentConfig = None):
     """Generate the methods from the tree structure recursively.
 
     Args:
@@ -159,7 +159,14 @@ def generate_tree_method_calls_rec(tree: method_tree.Node, config: TreeCallExper
     
     return method_bodies
 
-def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExperimentConfig):
+def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExperimentConfig = None):
+    if config is None: 
+        if subtree.left is None and subtree.right is None:
+            method_body = f"\tpublic void {subtree.name}() {{\n\t\t// End of chain\n\t}}"
+        else:
+            method_body = f"\tpublic void {subtree.name}() {{\n\t\t{subtree.left.name}();\n\t\t{subtree.right.name}();\n\t}}"
+        return f"\tpublic void {subtree.name}() {{\n{method_body}\n\t}}"
+
     if config.language.lower() != "java":
         raise ValueError("Tree call experiments only supports Java language")
     
@@ -170,13 +177,11 @@ def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExper
                                                    n_vars=config.n_vars,
                                                    n_loops=config.n_loops,
                                                    n_if=config.n_if)
-        # method_body = f"\tpublic void {subtree.name}() {{\n\t\t// End of chain\n\t}}"
     else: 
         method_body = control_flow.generate_method_body([subtree.left.name, subtree.right.name],
                                                    config.n_vars,
                                                    config.n_loops,
                                                    config.n_if) 
-        # method_body = f"\tpublic void {subtree.name}() {{\n\t\t{subtree.left.name}();\n\t\t{subtree.right.name}();\n\t}}"
 
     comment = "\t" + comment.replace("\n", "\n\t")
     method_body = "\t" + method_body.replace("\n", "\n\t")
@@ -233,6 +238,8 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     # The maximum length of a chain is deduced from the tree depth
     if max_chain_length is None:
         max_chain_length = (2**(tree_depth + 1) - 1)
+        
+    selection = []
                 
     for depth in range(max_chain_length + 1):
         # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
@@ -261,7 +268,7 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     
     return min_amount_of_questions
     
-def find_all_valid_chains(trees:list):
+def find_all_valid_chains(trees:list) -> tuple[list, list]:
     """Find all chains in the trees with a maximum length.
 
     Args:
@@ -285,7 +292,7 @@ def find_all_valid_chains(trees:list):
     return all_valid_chains, questions_with_distances_and_chains
 
 # ! We should not try to find ALL invalid chains, as it would be too costly in terms of time and resources.
-def find_all_invalid_chains(trees:list):
+def find_all_invalid_chains(trees:list) -> tuple[list, list]:
     """Find all invalid chains in the trees.
 
     Args:
@@ -312,7 +319,7 @@ def find_all_invalid_chains(trees:list):
     
     return all_invalid_chains, questions_with_distances_and_chains
 
-def generate_questions_from_valid_chains(chains:list, max_chain_length:int = None):
+def generate_questions_from_valid_chains(chains:list, max_chain_length:int = None) -> list:
     """Generate questions from valid chains.
 
     Args:
@@ -333,7 +340,7 @@ def generate_questions_from_valid_chains(chains:list, max_chain_length:int = Non
             questions_with_distances_and_chains.append((question, distance, chain))
     return questions_with_distances_and_chains
 
-def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = None):
+def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = None) -> list:
     """Generate questions from invalid chains.
 
     Args:
@@ -344,6 +351,7 @@ def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = N
     
     # TODO : à vérifier
     for item in chains:
+        # print("To verify:", item)
         for unreachable in item["unreachable_methods"]:
             if max_chain_length is None or len(item["chain"]) <= max_chain_length:
                 question = (
@@ -364,7 +372,10 @@ def write_chains_to_file(questions:list, filename:str):
             file.write(" ".join(chain) + '\n')  # Write each chain on a new line
 
 if __name__ == '__main__':
+
     # Generate an experiment with 3 trees of depth 3 ==> 15 methods each, 45 methods in total
-    generate_exp(exp_name="experiments/tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
+    # generate_exp(exp_name="experiments/tree_exp_2", n_trees=3, tree_depth=3, n_questions=2)
     # Generate a larger experiment with 3 trees of depth 6 ==> 127 methods each, 381 methods in total
-    generate_exp(exp_name="experiments/large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)
+    # generate_exp(exp_name="experiments/large_tree_exp", n_trees=3, tree_depth=6, n_questions=2)
+    
+    generate_exp("validation_code", 1, 2)
