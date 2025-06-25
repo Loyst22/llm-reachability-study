@@ -29,6 +29,20 @@ class Node:
             
         with open(file_path, 'w') as f:
             write_node(self)
+            
+def write_trees_to_files(trees: list, dir: str):
+    """Write individual tree files and a cumulative file."""
+    Path(f"{dir}/tree_structures").mkdir(parents=True, exist_ok=True)
+    cumulative_file = f"{dir}/tree_structures/all_tree_structures_0--{len(trees)-1}.txt"
+
+    with open(cumulative_file, 'w') as cum_f:
+        for idx, tree in enumerate(trees):
+            individual_path = f"{dir}/tree_structures/tree_structure_{idx}.txt"
+            tree.write_tree_to_file(individual_path)
+
+            cum_f.write(f"\n{'='*20} Tree {idx} {'='*20}\n\n")
+            with open(individual_path, 'r') as tree_f:
+                cum_f.write(tree_f.read())
 
 def build_binary_tree(depth: int, method_names: list, index: int = 0, parent: Node = None) -> Node:
     """Build a binary tree from a list of method names.
@@ -116,11 +130,12 @@ def depth_first_search(node: Node, search_node: Node):
         if current_node is None or is_found:
             return
         
+        method_names.append(current_node.name)
+        
         if current_node == search_node:
             is_found = True
             return
         
-        method_names.append(current_node.name)
         counter += 1
         counter_with_backtracking += 1
         
@@ -190,7 +205,8 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
                 "distance": distance,
                 "distance_with_backtracking": distance_with_backtracking,
                 "distance_height": distance_height,
-            })        
+            })    
+            
         
         # Traverse left and right children
         find_chains_starting_from(root_node, current_node.left)
@@ -207,6 +223,7 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     # This is because for each level k, we have 2^k nodes, and each node can have 2^{h+1-k} - 2 chains.
     # The total number of chains is the sum of all chains from all levels. 
     
+    print("Here are the chains: ", chains)    
     return chains
     
 def find_all_invalid_chains_depth_first(node: Node, root: Node = None, chains: list = None) -> list:
