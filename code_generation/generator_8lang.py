@@ -636,7 +636,7 @@ class ExperimentRunner:
         print(f"Generated {len(trees)} trees")
         _, valid_questions = gen_tree.find_all_valid_chains(trees=trees)
         _, invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
-       
+        
         selection = []
        
         # The maximum length of a chain is deduced from the tree depth
@@ -831,26 +831,35 @@ class ExperimentRunner:
             return f"{depths[0]}--{depths[-1]}"
         return "_".join(str(d) for d in depths)
 
-    def generate_batch_experiments(self, context_ranges: List[int], n_comments: int, language: str = "java", experiment_type: str = "linear") -> None:
+    def generate_batch_experiments(self, context_ranges: List[int], n_comments: int,
+                                   n_vars: int, n_loops:int, n_if: int, language: str = "java",
+                                   experiment_type: str = "linear") -> None:
         """Generate multiple experiments for different context sizes"""
         for context_size in context_ranges:
             config = ExperimentConfig(
-                name=f'experiments/{language}/context_{context_size}_comments_{n_comments}',
+                name=f'experiments/{language}/{experiment_type}/context_{context_size}_comments_{n_comments}_vars_{n_vars}_loops_{n_loops}_if_{n_if}',
                 context_size=context_size,
                 depths=list(range(1, 11)),
-                n_questions=200,
+                n_questions= 5, # was 200
                 n_padding=0,
                 n_comment_lines=n_comments,
+                n_vars=n_vars,
+                n_loops=n_loops,
+                n_if=n_if,
                 language=language,
                 type=experiment_type
             )
             
             self.generate_experiment(config)
+            
+            # Commented for debugging purposes
+            """
             self.file_writer.write_slurm_script(
                 f'{language}_context_{context_size}_comments_{n_comments}',
                 config.name,
                 config.time_limit
             )
+            """
 
     def generate_all_experiments(self, languages: List[str] = ["java"]) -> None:
         """Generate all predefined experiments for specified languages"""
@@ -863,13 +872,43 @@ class ExperimentRunner:
             # ([100], 24)
         ]
         
+        experiment_configs = [
+            # ([depths], comments, vars, loops, if)
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 0, 1, 1, 1),
+            ([50, 75, 100, 150, 200, 250], 0, 2, 2, 2),
+            
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 2, 1, 1, 1),
+            ([50, 75, 100, 150, 200, 250], 2, 2, 2, 2),
+            
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350], 4, 1, 1, 1),
+            ([50, 75, 100, 150, 200], 4, 2, 2, 2),
+            
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 7, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300], 7, 1, 1, 1),
+            ([50, 75, 100, 150, 200], 7, 2, 2, 2),
+            
+            ([50, 75, 100, 150, 200], 12, 0, 0, 0),
+            ([50, 75, 100, 150, 200], 12, 1, 1, 1),
+            ([50, 75, 100, 150, 200], 12, 2, 2, 2),
+            
+            ([50, 75, 100], 24, 0, 0, 0),
+            ([50, 75, 100], 24, 1, 1, 1),
+            ([50, 75, 100], 24, 2, 2, 2),
+        ]
+        
         for type in ["linear", "tree"]:
             print(f"\n=== Generating {type} experiments ===")
             for language in languages:
                 print(f"\n=== Generating experiments for {language.upper()} ===")
-                for context_ranges, n_comments in experiment_configs:
+                for context_ranges, n_comments, n_vars, n_loops, n_if in experiment_configs:
                     self.generate_batch_experiments(context_ranges=context_ranges,
                                                     n_comments=n_comments,
+                                                    n_vars=n_vars,
+                                                    n_loops=n_loops,
+                                                    n_if=n_if,
                                                     language=language,
                                                     experiment_type=type)
 
@@ -892,7 +931,7 @@ if __name__ == "__main__":
     # runner.generate_all_experiments(["cpp", "fortran"])
 
     # Or generate for a single language
-    # runner.generate_all_experiments(["java"])
+    runner.generate_all_experiments(["java"])
     
     # Example of generating a single experiment with custom config
     
@@ -925,5 +964,6 @@ if __name__ == "__main__":
         language="Java",
         type="linear"
     )
+    
     # runner.generate_experiment(custom_config)
 
