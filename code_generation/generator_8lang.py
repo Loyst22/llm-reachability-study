@@ -625,10 +625,17 @@ class ExperimentRunner:
         # Write all files
         directory.mkdir(parents=True, exist_ok=True)
         
+        if config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_linear_calls
+        if config.n_if >= 2 or config.n_loops >= 2:
+            prompt = prompts.in_context_control_flow_2_linear_calls
+        else:
+            prompt = prompts.in_context_linear_calls
+        
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
-        self.file_writer.write_prompt_to_file(prompts.in_context, the_class, directory / "system.txt")
+        self.file_writer.write_prompt_to_file(prompt, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
@@ -679,11 +686,18 @@ class ExperimentRunner:
         print(f"Questions per distance after selection: {self.count_distances(selection)}")
 
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
+        
+        if config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_tree_calls
+        if config.n_if <= 2 or config.n_loops <= 2:
+            prompt = prompts.in_context_control_flow_2_tree_calls
+        else:
+            prompt = prompts.in_context_tree_calls
 
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
-        self.file_writer.write_prompt_to_file(prompts.in_context_tree_calls, the_class, directory / "system.txt")
+        self.file_writer.write_prompt_to_file(prompt, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
@@ -885,7 +899,7 @@ class ExperimentRunner:
         ]
         
         experiment_configs = [
-            # ([depths], comments, vars, loops, if)
+            # ([context], comments, vars, loops, if)
             ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0, 0, 0, 0),
             ([50, 75, 100, 150, 200, 250, 300, 350, 400], 0, 1, 1, 1),
             ([50, 75, 100, 150, 200, 250], 0, 2, 2, 2),

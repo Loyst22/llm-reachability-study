@@ -287,7 +287,7 @@ def generate_class_new(directory:str, context_size:int, n_chains:int, chain_size
 
     dir = Path(directory)
     write_class_to_file(the_class,  dir / "TheClass.java")
-    write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
+    write_prompt_to_file(p.in_context_linear_calls, the_class, dir / "system.txt")
     write_questions_to_file(selection, dir / "reachability_questions.txt")
     write_chains_to_file(selection, dir / "chains.txt")
     write_methods_to_file(method_names,  dir / "methods.txt")

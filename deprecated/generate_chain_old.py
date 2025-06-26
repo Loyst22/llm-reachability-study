@@ -440,7 +440,7 @@ def generate_class(n_method, max_dist, q_per_dist):
     print(n_method)
     #write_prompt_to_file(prompt_start, the_class, prompt_end, "../llama.cpp-master/system.txt")
     write_class_to_file(the_class, "../llama.cpp-master/TheClass.java")
-    write_prompt_to_file(p.in_context, the_class, "../llama.cpp-master/system.txt")
+    write_prompt_to_file(p.in_context_linear_calls, the_class, "../llama.cpp-master/system.txt")
     write_questions_to_file(selection, "../llama.cpp-master/reachability_questions.txt")
     write_chains_to_file(selection,  "../llama.cpp-master/chains.txt")
     write_methods_to_file(method_names,  "../llama.cpp-master/methods.txt")
@@ -549,7 +549,7 @@ def generate_class_new(directory, context_size, n_chains, chain_size, depths, n_
 
     #write_prompt_to_file(prompt_start, the_class, prompt_end, "../llama.cpp-master/system.txt")
     write_class_to_file(the_class,  dir / "TheClass.java")
-    write_prompt_to_file(p.in_context, the_class, dir / "system.txt")
+    write_prompt_to_file(p.in_context_linear_calls, the_class, dir / "system.txt")
     write_questions_to_file(selection, dir / "reachability_questions.txt")
     write_chains_to_file(selection, dir / "chains.txt")
     write_methods_to_file(method_names,  dir / "methods.txt")

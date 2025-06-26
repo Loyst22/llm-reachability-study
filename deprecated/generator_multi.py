@@ -422,7 +422,7 @@ class ExperimentRunner:
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
         self.file_writer.write_class_to_file(the_class, directory / class_filename)
-        self.file_writer.write_prompt_to_file(p.in_context, the_class, directory / "system.txt")
+        self.file_writer.write_prompt_to_file(p.in_context_linear_calls, the_class, directory / "system.txt")
         self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
         self.file_writer.write_chains_to_file(selection, directory / "chains.txt")
         self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
