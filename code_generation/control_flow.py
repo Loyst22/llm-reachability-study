@@ -1,3 +1,4 @@
+from math import ceil
 import random
 import generate_chain as generate_chain
 
@@ -71,9 +72,9 @@ def random_true_condition(variables: list) -> str:
         # For double, ensure the condition is true based on the value of the variable
         delta = random.uniform(1, 5)
         if var.value <= 5.0:
-            return f"{var.name} <= {var.value + delta}"  # z <= z + delta where z <= 5
+            return f"{var.name} <= {round(var.value + delta, 2)}"  # z <= z + delta where z <= 5
         else:
-            return f"{var.name} >= {var.value - delta}"  # z >= z - delta where z > 5
+            return f"{var.name} >= {round(var.value - delta, 2)}"  # z >= z - delta where z > 5
         
 def random_false_condition(variables: list) -> str:
     """Generate a simple condition that always evaluates to False using declared variables."""
@@ -100,9 +101,27 @@ def random_false_condition(variables: list) -> str:
         # For double, ensure the condition is false based on the value of the variable
         delta = random.uniform(1, 5)
         if var.value <= 5.0:
-            return f"{var.name} <= {var.value - delta}"  # z <= z - delta where z <= 5
+            return f"{var.name} <= {round(var.value - delta, 2)}"  # z <= z - delta where z <= 5
         else:
-            return f"{var.name} >= {var.value + delta}"  # z >= z + delta where z > 5
+            return f"{var.name} >= {round(var.value + delta, 2)}"  # z >= z + delta where z > 5
+        
+def random_true_if(variables: list, next_method: str = None) -> str:
+    """Generate a random if statement"""
+    condition = random_true_condition(variables)
+    if next_method is not None:
+        return f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}"
+    else:
+        var = random.choice(variables)
+        return f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}"
+    
+def random_false_if(variables: list, useless_method: str = None) -> str:
+    """Generate a random if statement"""
+    condition = random_false_condition(variables)
+    if useless_method is not None:
+        return f"\tif ({condition}) {{\n\t{method_call(useless_method)}\n\t}}"
+    else:
+        var = random.choice(variables)
+        return f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}"
     
 def method_call(called_method: str) -> str:
     """Generate the next method call using the given method name."""
@@ -165,50 +184,80 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
             body.append(f"\t{var.var_type} {var.name} = {var.value};")
     
     end_of_chain = not next_methods
-            
-    total_methods = len(next_methods)
-    n_plain = max(0, total_methods - (n_if + n_loops))
-    control_flow_types = ["if"] * n_if + ["loop"] * n_loops
-    random.shuffle(control_flow_types)
-    control_flow_types += n_plain * ["plain"]
     
+    # We define the types of control flow blocks to add to the method
+    # And we shuffle them to avoid having all if statement separated from the loops 
+    total_methods = len(next_methods)
+    total_blocks = n_if + n_loops
+    calls_in_if = 0
+    calls_in_loop = 0
+    calls_in_plain = 0
+
+    if total_blocks > 0 and total_methods > 0:
+        # Allocate proportionally
+        calls_in_if = ceil((n_if / total_blocks) * total_methods)
+        calls_in_loop = ceil((n_loops / total_blocks) * total_methods)
+        calls_in_plain = total_methods - (calls_in_if + calls_in_loop)
+    else:
+        # If no blocks, all method calls are plain
+        calls_in_plain = total_methods
+    
+    control_flow_types = []
+    
+    # Add if statement blocks (either with method calls or without)
+    for _ in range(calls_in_if):
+        control_flow_types.append(("if", True))
+    for _ in range(n_if - calls_in_if):
+        control_flow_types.append(("if", False))
+    # Add loops - while and for (either with method calls or without)
+    for _ in range(calls_in_loop):
+        control_flow_types.append(("loop", True))
+    for _ in range(n_loops - calls_in_loop):
+        control_flow_types.append(("loop", False))
+    # Add plain method calls if necessary
+    for _ in range(calls_in_plain):
+        control_flow_types.append(("plain", True))
+        
+    random.shuffle(control_flow_types)
+    
+    # Used to declare counter when necessary and to avoid doing it when not necessary
     nb_while = 0
     
-    for type in control_flow_types:
-        if type == "if":
+    for block_type, has_call in control_flow_types:
+        # Generate a if statement
+        if block_type == "if":
             condition = random_true_condition(variables)
-            if next_methods:
+            if next_methods and has_call:
                 next_method = next_methods.pop(0)
-                control_flow.append(f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}")
+                control_flow.append(random_true_if(variables, next_method))
             else:
-                var = random.choice(variables)
-                control_flow.append(f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}")
+                control_flow.append(random_true_if(variables))
         
-        if type == "loop":
-            if next_methods:
+        # Generate a loop (while or for)
+        if block_type == "loop":
+            if next_methods and has_call:
                 next_method = next_methods.pop(0)
                 loop_code, loop_type = random_loop(next_method, nb_while)
             else:
                 loop_code, loop_type = random_loop(None, nb_while)
             
-            # if it's the first while we wait to prepend it (for valid declaration)
+            # Next_method may be None of valid here : both work
+            control_flow.append(loop_code)
+            
             if loop_type == "while":
                 nb_while += 1
             
-            # next_method may be None of valid here : both work
-            control_flow.append(loop_code)
-        
-        if type == "plain":
-            if next_methods:
+        # Add simple method calls (when no more control flow)
+        if block_type == "plain":
+            if next_methods and has_call:
                 next_method = next_methods.pop(0)
                 control_flow.append(f"\t{next_method}();")
-                
-            else:
-                raise ValueError("Weird error...")
         
         
     body.extend(control_flow)
     
+    # If it's the end of chain we inform the LLM
+    # ? is it actually necessary ?
     if end_of_chain:
         body.append(f"\t// End of chain")
     
