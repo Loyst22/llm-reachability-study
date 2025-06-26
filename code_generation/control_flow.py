@@ -47,63 +47,135 @@ def random_variable() -> Variable:
     return Variable(var_name, var_type, value)
 
 
-def random_true_condition(variables: list) -> str:
+def random_true_condition(variables: list, complexity: int = 0) -> str:
     """Generate a simple condition that always evaluates to True using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
     
-    # Generate conditions based on variable type, ensuring they are always true
-    if var.var_type == "int" or var.var_type == "long":
-        # For int, ensure the condition is true based on the value of the variable
-        delta = random.randint(1, 5) # To avoid situation like 5 <= 5...
-        if var.value <= 5:
-            return f"{var.name} <= {var.value + delta}"  # x <= x + delta where x is <= value
+    if complexity == 2:
+        rand = random.random()
+        if rand < 1/8:
+            return "(" + random_true_condition(variables, 1) + ") && " + random_true_condition(variables, 0)
+        elif rand < 1/4:
+            return random_true_condition(variables, 0) + " && (" + random_true_condition(variables, 1) + ")"
+        elif rand < 3/8:
+            return "(" + random_true_condition(variables, 1) + ") || " + random_true_condition(variables, 0)
+        elif rand < 1/2:
+            return random_true_condition(variables, 0) + " || (" + random_true_condition(variables, 1) + ")"
+        elif rand < 5/8:
+            return "(" + random_true_condition(variables, 1) + ") || " + random_false_condition(variables, 0)
+        elif rand < 3/4:
+            return random_true_condition(variables, 0) + " || (" + random_false_condition(variables, 1) + ")"
+        elif rand < 7/8:
+            return "(" + random_false_condition(variables, 1) + ") || " + random_true_condition(variables, 0)
         else:
-            return f"{var.name} >= {var.value - delta}"  # x >= x - delta where x is > value
-    elif var.var_type == "boolean":
-        # For boolean, create a condition that evaluates to true
-        if random.random() < 0.5:
-            java_value = str(var.value).lower()
-            return f"{var.name} == {java_value}"
+            return random_false_condition(variables, 0) + " || (" + random_true_condition(variables, 1) + ")"
+            
+            
+    
+    if complexity == 1:
+        rand = random.random()
+        if rand < 1/4:
+            return random_true_condition(variables, 0) + " && " + random_true_condition(variables, 0)
+        elif rand < 1/2:
+            return random_true_condition(variables, 0) + " || " + random_true_condition(variables, 0)
+        elif rand < 3/4:
+            return random_true_condition(variables, 0) + " || " + random_false_condition(variables, 0)
         else:
-            not_java_value = str(not var.value).lower()
-            return f"{var.name} != {not_java_value}"
-    elif var.var_type == "double":
-        # For double, ensure the condition is true based on the value of the variable
-        delta = random.uniform(1, 5)
-        if var.value <= 5.0:
-            return f"{var.name} <= {round(var.value + delta, 2)}"  # z <= z + delta where z <= 5
-        else:
-            return f"{var.name} >= {round(var.value - delta, 2)}"  # z >= z - delta where z > 5
+            return random_false_condition(variables, 0) + " || " + random_true_condition(variables, 0)
         
-def random_false_condition(variables: list) -> str:
+    
+    # Generate conditions based on variable type, ensuring they are always true
+    if complexity == 0:
+        match var.var_type:
+            case "int" | "long":
+                # For int, ensure the condition is true based on the value of the variable
+                delta = random.randint(1, 5) # To avoid situation like 5 <= 5...
+                if var.value <= 5:
+                    return f"{var.name} <= {var.value + delta}"  # x <= x + delta where x is <= value
+                else:
+                    return f"{var.name} >= {var.value - delta}"  # x >= x - delta where x is > value
+
+            case "boolean":
+                # For boolean, create a condition that evaluates to true
+                if random.random() < 0.5:
+                    java_value = str(var.value).lower()
+                    return f"{var.name} == {java_value}"
+                else:
+                    not_java_value = str(not var.value).lower()
+                    return f"{var.name} != {not_java_value}"
+
+            case "double":
+                # For double, ensure the condition is true based on the value of the variable
+                delta = random.uniform(1, 5)
+                if var.value <= 5.0:
+                    return f"{var.name} <= {round(var.value + delta, 2)}"  # z <= z + delta where z <= 5
+                else:
+                    return f"{var.name} >= {round(var.value - delta, 2)}"  # z >= z - delta where z > 5
+            
+
+def random_false_condition(variables: list, complexity: int = 0) -> str:
     """Generate a simple condition that always evaluates to False using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
     
-    # Generate conditions based on variable type, ensuring they are always false
-    if var.var_type == "int" or var.var_type == "long":
-        # For int, ensure the condition is false based on the value of the variable
-        delta = random.randint(1, 5) 
-        if var.value <= 5:
-            return f"{var.name} <= {var.value - delta}"  # x <= x - delta where x is <= 5
+    if complexity == 2:
+        rand = random.random()
+        if rand < 1/8:
+            return "(" + random_false_condition(variables, 1) + ") && " + random_false_condition(variables, 0)
+        elif rand < 1/4:
+            return random_false_condition(variables, 0) + " && (" + random_false_condition(variables, 1) + ")"
+        elif rand < 3/8:
+            return "(" + random_false_condition(variables, 1) + ") && " + random_true_condition(variables, 0)
+        elif rand < 1/2:
+            return random_false_condition(variables, 0) + " && (" + random_true_condition(variables, 1) + ")"
+        elif rand < 5/8:
+            return "(" + random_true_condition(variables, 1) + ") && " + random_false_condition(variables, 0)
+        elif rand < 3/4:
+            return random_true_condition(variables, 0) + " && (" + random_false_condition(variables, 1) + ")"
+        elif rand < 7/8:
+            return "(" + random_false_condition(variables, 1) + ") || " + random_false_condition(variables, 0)
         else:
-            return f"{var.name} >= {var.value + delta}"  # x >= x + delta where x is > 5
-    elif var.var_type == "boolean":
-        # For boolean, create a condition that evaluates to false
-        if random.random() < 0.5:
-            not_java_value = str(not var.value).lower()
-            return f"{var.name} == {not_java_value}"
+            return random_false_condition(variables, 0) + " || (" + random_false_condition(variables, 1) + ")"
+    
+    if complexity == 1:
+        rand = random.random()
+        if rand < 1/4:
+            return random_false_condition(variables, 0) + " && " + random_false_condition(variables, 0)
+        elif rand < 1/2:
+            return random_false_condition(variables, 0) + " && " + random_true_condition(variables, 0)
+        elif rand < 3/4:
+            return random_true_condition(variables, 0) + " && " + random_false_condition(variables, 0)
         else:
-            java_value = str(var.value).lower()
-            return f"{var.name} != {java_value}"
-    elif var.var_type == "double":
-        # For double, ensure the condition is false based on the value of the variable
-        delta = random.uniform(1, 5)
-        if var.value <= 5.0:
-            return f"{var.name} <= {round(var.value - delta, 2)}"  # z <= z - delta where z <= 5
-        else:
-            return f"{var.name} >= {round(var.value + delta, 2)}"  # z >= z + delta where z > 5
+            return random_false_condition(variables, 0) + " || " + random_false_condition(variables, 0)
+    
+    if complexity == 0:
+        match var.var_type:
+            case "int" | "long":
+                # For int, ensure the condition is false based on the value of the variable
+                delta = random.randint(1, 5) 
+                if var.value <= 5:
+                    return f"{var.name} <= {var.value - delta}"  # x <= x - delta where x is <= 5
+                else:
+                    return f"{var.name} >= {var.value + delta}"  # x >= x + delta where x is > 5
+            
+            case "boolean":
+                # For boolean, create a condition that evaluates to false
+                if random.random() < 0.5:
+                    not_java_value = str(not var.value).lower()
+                    return f"{var.name} == {not_java_value}"
+                else:
+                    java_value = str(var.value).lower()
+                    return f"{var.name} != {java_value}"
+            
+            case "double":
+                # For double, ensure the condition is false based on the value of the variable
+                delta = random.uniform(1, 5)
+                if var.value <= 5.0:
+                    return f"{var.name} <= {round(var.value - delta, 2)}"  # z <= z - delta where z <= 5
+                else:
+                    return f"{var.name} >= {round(var.value + delta, 2)}"  # z >= z + delta where z > 5
+                
         
 def random_true_if(variables: list, next_method: str = None) -> str:
     """Generate a random if statement"""
@@ -338,3 +410,15 @@ def generate_full_class(nb_methods: int=15, n_loops: int=None, n_if: int=None, n
 """ Test """
 
 # generate_full_class()
+
+if __name__ == '__main__':
+    a = random_variable()
+    b = random_variable()
+    
+    print("First variable:", a)
+    print("Seconde variable:", b)
+    
+    print("True condition:", random_true_condition([a, b], 2))
+    print("False condition:", random_false_condition([a, b], 2))
+    
+    
