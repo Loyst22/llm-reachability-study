@@ -650,9 +650,8 @@ class ExperimentRunner:
         """        
         lang_generator = LanguageFactory.get_generator(config.language)
         
-        print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {directory}")
+        # print(f"Generating {n_trees} trees with depth {tree_depth} for experiment {directory}")
         trees, method_names = gen_tree.generate_many_call_trees(directory, tree_depth, n_trees)
-        print(f"Generated {len(trees)} trees")
         valid_questions = gen_tree.find_all_valid_chains(trees=trees)
         invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
         
@@ -682,8 +681,8 @@ class ExperimentRunner:
             selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, min_amount_of_questions))
             selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, min_amount_of_questions))
     
-        print(f"Selected {len(selection)} questions")
-        print(f"Questions per distance after selection: {self.count_distances(selection)}")
+        # print(f"Selected {len(selection)} questions")
+        # print(f"Questions per distance after selection: {self.count_distances(selection)}")
 
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
         
@@ -810,11 +809,6 @@ class ExperimentRunner:
         
         chain_size = max(config.depths) + min(config.n_padding, 2)
         
-        # In case the context size chosen is too small, we take an appropriate size wrt the chain size
-        # This is to ensure that the number of chains that fit into the context is at least 1
-        if chain_size > config.context_size:
-            config.context_size = chain_size + 2
-        
         # We need to define the number of trees and their depths
         # To do so we use the chain size and find the appropriate tree depth
         tree_depth = 0
@@ -827,6 +821,9 @@ class ExperimentRunner:
         # The number of trees must correspond to the context size of the config
         methods_per_tree = 2**(tree_depth + 1) - 1
         n_trees = ceil(config.context_size/methods_per_tree)
+        
+        if config.context_size < methods_per_tree * n_trees:
+            config.context_size = methods_per_tree * n_trees
         
         # We create new contexts until we have enough questions
         n_questions_left = config.n_questions
@@ -866,7 +863,7 @@ class ExperimentRunner:
                 name=f'experiments/{language}/{experiment_type}/context_{context_size}_comments_{n_comments}_vars_{n_vars}_loops_{n_loops}_if_{n_if}',
                 context_size=context_size,
                 depths=list(range(1, 11)),
-                n_questions= 5, # was 200
+                n_questions= 200,
                 n_padding=0,
                 n_comment_lines=n_comments,
                 n_vars=n_vars,

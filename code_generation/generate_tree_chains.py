@@ -281,12 +281,12 @@ def find_all_valid_chains(trees:list) -> tuple[list, list]:
         # print(f"Found {len(chains)} valid chains in tree {trees.index(tree) + 1}")
         # print(f"Chains found in tree {trees.index(tree) + 1}: {chains}")
     
-    print(f"Total valid chains found: {len(all_valid_chains)}")
+    # print(f"Total valid chains found: {len(all_valid_chains)}")
     
     generate_questions_from_valid_chains(all_valid_chains)
     
-    chain_distances = gen.count_distances(all_valid_chains)
-    print(f"Chain distances: {chain_distances}")
+    # chain_distances = gen.count_distances(all_valid_chains)
+    # print(f"Chain distances: {chain_distances}")
     
     return all_valid_chains
 
@@ -307,9 +307,7 @@ def find_all_invalid_chains(trees:list) -> tuple[list, list]:
         # print(f"Found {len(invalid_chains)} invalid chains in tree {trees.index(tree) + 1}")
         # print(f"Invalid chains found in tree {trees.index(tree) + 1}: {invalid_chains}")
     
-    print(f"Total invalid chains found: {len(all_invalid_chains)}")
-    
-    # print(f"Invalid chains: {all_invalid_chains}")
+    # print(f"Total invalid chains found: {len(all_invalid_chains)}")
     
     generate_questions_from_invalid_chains(all_invalid_chains)
     

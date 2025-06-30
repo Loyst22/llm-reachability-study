@@ -32,10 +32,11 @@ def is_var_in_list(var: Variable, list: list) -> bool:
     """Check if a variable with the same name exists in the list."""
     return any(v.name == var.name for v in list)
 
-def random_variable() -> Variable:
+def random_variable(var_type: str = None) -> Variable:
     """Generate a random variable with a type and value."""
     var_name = Variable.random_variable_name()
-    var_type = random.choice(["int", "long", "boolean", "double"])
+    if var_type is None or var_type not in ["int", "long", "boolean", "double"]:
+        var_type = random.choice(["int", "long", "boolean", "double"])
     
     if var_type == "int" or var_type == "long":
         value = random.randint(1, 10)
@@ -51,6 +52,17 @@ def random_true_condition(variables: list, complexity: int = 0) -> str:
     """Generate a simple condition that always evaluates to True using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
+    
+    if complexity == 3:
+        rand = random.random()
+        if rand < 1/4:
+            return "(" + random_true_condition(variables, 1) + ") && (" + random_true_condition(variables, 1) + ")"
+        elif rand < 1/2:
+            return "(" + random_true_condition(variables, 1) + ") || (" + random_true_condition(variables, 1) + ")"
+        elif rand < 3/4:
+            return "(" + random_true_condition(variables, 1) + ") || (" + random_false_condition(variables, 1) + ")"
+        else:
+            return "(" + random_false_condition(variables, 1) + ") || (" + random_true_condition(variables, 1) + ")"
     
     if complexity == 2:
         rand = random.random()
@@ -118,6 +130,17 @@ def random_false_condition(variables: list, complexity: int = 0) -> str:
     """Generate a simple condition that always evaluates to False using declared variables."""
     # Choose a random variable
     var = random.choice(variables)
+    
+    if complexity == 3:
+        rand = random.random()
+        if rand < 1/4:
+            return "(" + random_false_condition(variables, 1) + ") && (" + random_false_condition(variables, 1) + ")"
+        elif rand < 1/2:
+            return "(" + random_false_condition(variables, 1) + ") && (" + random_true_condition(variables, 1) + ")"
+        elif rand < 3/4:
+            return "(" + random_true_condition(variables, 1) + ") && (" + random_false_condition(variables, 1) + ")"
+        else:
+            return "(" + random_false_condition(variables, 1) + ") || (" + random_false_condition(variables, 1) + ")"
     
     if complexity == 2:
         rand = random.random()
@@ -298,7 +321,6 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
     for block_type, has_call in control_flow_types:
         # Generate a if statement
         if block_type == "if":
-            condition = random_true_condition(variables)
             if next_methods and has_call:
                 next_method = next_methods.pop(0)
                 control_flow.append(random_true_if(variables, next_method))
@@ -412,13 +434,20 @@ def generate_full_class(nb_methods: int=15, n_loops: int=None, n_if: int=None, n
 # generate_full_class()
 
 if __name__ == '__main__':
-    a = random_variable()
-    b = random_variable()
+    a = random_variable("int")
+    b = random_variable("int")
+    c = random_variable("int")
+    d = random_variable("int")
+    
     
     print("First variable:", a)
-    print("Seconde variable:", b)
+    print("Second variable:", b)
+    print("Third variable:", c)
+    print("Fourth variable:", d)
     
-    print("True condition:", random_true_condition([a, b], 2))
-    print("False condition:", random_false_condition([a, b], 2))
+    print()
+    
+    print("True condition:", random_true_condition([a, b, c, d], 3))
+    print("False condition:", random_false_condition([a, b, c, d], 3))
     
     
