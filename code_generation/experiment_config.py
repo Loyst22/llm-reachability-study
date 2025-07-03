@@ -16,7 +16,7 @@ class ExperimentConfig:
     n_vars: int = 0
     n_loops: int = 0
     n_if: int = 0
-    time_limit: str = "1:00:00"
+    time_limit: str = "6:00:00"
     language: str = "java"  # Added language parameter
     type: str = "linear"
     
@@ -58,6 +58,10 @@ class ExperimentConfig:
 
 @dataclass
 class LinearCallExperimentConfig(ExperimentConfig):
+    def write_file(self, filepath: str) -> None:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(asdict(self), f, indent=4)
     pass
 @dataclass
 class TreeCallExperimentConfig(ExperimentConfig):
@@ -70,3 +74,8 @@ class TreeCallExperimentConfig(ExperimentConfig):
     def n_method(self) -> int:
         """Calcul automatique du nombre de méthodes d'un arbre"""
         return self.n_tree * (self.calls_per_function**(self.tree_depth+1) - 1) // (self.calls_per_function - 1)
+    
+    def write_file(self, filepath: str) -> None:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(asdict(self), f, indent=4)
