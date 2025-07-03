@@ -1,3 +1,4 @@
+import os
 import random
 from pathlib import Path
 from collections import defaultdict
@@ -706,10 +707,17 @@ class ExperimentRunner:
     def generate_experiment(self, config: ExperimentConfig) -> List[Path]:
         """Generate an experiment based on configuration (and its type)"""
         print(f"Starting experiment with config {config}")
+        # ! If write file stays here the context size will be inaccurate for tree calls
+        # ! since context size can only be multiples of 15 for these depths
+        # ! To have the updated version, it should be called after generating the experiment
         if config.type == "linear":
-            return self.generate_linear_experiment(config)
+            ret = self.generate_linear_experiment(config)
+            config.write_file(os.path.join(config.name, "config.json"))
+            return ret
         elif config.type == "tree":
-            return self.generate_tree_experiment(config)
+            ret = self.generate_tree_experiment(config)
+            config.write_file(os.path.join(config.name, "config.json"))
+            return ret
         else: 
             raise ValueError(f"Unknow experiment type: {config.type}")
         
@@ -761,7 +769,7 @@ class ExperimentRunner:
             q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
             q_end = (config.n_questions - n_questions_left + n_chains_in_context) * len(config.depths) * 2
             
-            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_var_{config.n_vars}_loop_{config.n_loops}_if_{config.n_if}_qs_{q_start}--{q_end}_{config.language}"
+            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_qs-{q_start}--{q_end}_{config.language}_linear"
             
             # One chain account for one set of questions at most 
             # as the larger depth question often require a full chain
@@ -832,7 +840,7 @@ class ExperimentRunner:
         
         while n_questions_left > 0:
             depth_str = self._format_depths(config.depths)
-            exp_dir = base_dir / f"ctx_{config.context_size}_depths_{depth_str}_com_{config.n_comment_lines}_var_{config.n_vars}_loop_{config.n_loops}_if_{config.n_if}_qs_{context_counter}_{config.language}"
+            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_qs-{context_counter}_{config.language}_tree"
             
             
             # n_questions_generated = gen_tree.generate_exp(exp_dir, n_trees, tree_depth, max(config.depths), n_questions_left)
@@ -860,7 +868,7 @@ class ExperimentRunner:
         """Generate multiple experiments for different context sizes"""
         for context_size in context_ranges:
             config = ExperimentConfig(
-                name=f'experiments/{language}/{experiment_type}/context_{context_size}_comments_{n_comments}_vars_{n_vars}_loops_{n_loops}_if_{n_if}',
+                name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
                 context_size=context_size,
                 depths=list(range(1, 11)),
                 n_questions= 200,

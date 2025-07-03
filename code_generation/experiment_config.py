@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import json
+import os
 from typing import List
 
 
@@ -48,6 +50,11 @@ class ExperimentConfig:
             f"Type:                 {self.type}\n"
             f"{'-'*46}"
         )
+        
+    def write_file(self, filepath: str) -> None:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(asdict(self), f, indent=4)
 
 @dataclass
 class LinearCallExperimentConfig(ExperimentConfig):
