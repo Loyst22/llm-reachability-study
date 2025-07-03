@@ -43,15 +43,17 @@ def extract_hierarchy_from_path(path, base_path):
     levels = ["_Experiment", "_Context size", "_Model", "_answer type", "answer category", "answer subcategory"]
     for i, component in enumerate(components):
         level_name = levels[i] # f"level_{i + 1}"
-        # Match directory name in the format "DIRECTORY_NAME-T (U)"
-        match = re.match(r"(?P<name>.+?)-(?P<T>\d+) \((?P<U>\d+)\)", component)
+        # Match directory name in the format "DIRECTORY_NAME-N (P)": N amount, P percent
+        match = re.match(r"(?P<name>.+?)-(?P<N>\d+) \((?P<P>\d+)\)", component)
         if match:
             properties[level_name] = match.group("name")
-            properties[f"{level_name} Amount"] = int(match.group("T"))
-            properties[f"{level_name} Percent"] = int(match.group("U"))
+            properties[f"{level_name} Amount"] = int(match.group("N"))
+            properties[f"{level_name} Percent"] = int(match.group("P"))
         else:
             if level_name == "_Context size":
-                context, comments = re.findall(r'\d+', component)
+                # TODO: use *rest to analyse data
+                context, comments, *rest = re.findall(r'\d+', component)
+                # context = re.findall(r'\d+', component)
                 properties["_Context"] = context
                 properties["_Comments"] = comments
             else:
@@ -65,8 +67,8 @@ def extract_properties_from_file(file_name):
     # Match file name in the format "resultX-Y-(Z).txt", allowing Z to be negative
     match = re.match(r"result(?P<X>\d+)-(?P<Y>\d+)-\((?P<Z>-?\d+)\)\.txt", file_name)
     if match:
-        properties['Batch number'] = int(match.group("X"))
-        properties['Answer number'] = int(match.group("Y"))
+        properties['Answer number'] = int(match.group("X"))
+        properties['Batch number'] = int(match.group("Y"))
         properties['Depth'] = int(match.group("Z"))
     return properties
 
