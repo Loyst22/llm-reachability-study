@@ -146,5 +146,5 @@ def plot_lines(clicked_points):
 
 # Run it
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)
 

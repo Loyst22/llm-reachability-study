@@ -560,7 +560,7 @@ def update_slice_heatmap(slice_info, group_depths, selected_metric, view_mode):
     return go.Figure()
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)
     import webbrowser
     url = 'http://127.0.0.1:8050/'
     webbrowser.open_new(url)
