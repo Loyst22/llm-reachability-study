@@ -736,7 +736,7 @@ class ExperimentRunner:
         # - For a valid chain of n methods, the largest depth/distance is n-1
         # - For an invalid chain of n methods, the largest depth/distance is -(n-2)
         # If the padding is 0 or 1, we need at least 2 additional methods to take that into account
-        chain_size = max(config.depths) + min(config.n_padding, 2)
+        chain_size = max(config.depths) + max(config.n_padding, 2)
         
         # In case the context size chosen is too small, we take an appropriate size wrt the chain size
         # This is to ensure that the number of chains that fit into the context is at least 1
