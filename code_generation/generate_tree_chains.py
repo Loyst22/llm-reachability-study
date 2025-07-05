@@ -124,6 +124,51 @@ def generate_many_call_trees(dir:str, tree_depth:int, n_trees:int):
     #     tree.write_tree_to_file(f"{dir}/tree_structures/tree_structure_{trees.index(tree)}.txt")
         
     return trees, method_names
+
+def generate_many_call_trees_v2(dir: str, config: TreeCallExperimentConfig):
+    """Generate a list of method bodies that call each other in a tree-like structure.
+
+    Args:
+        tree_depth (int): The depth of the tree to be generated.
+        n_trees (int): The number of trees to generate.
+    """
+    method_names = gen.generate_unique_method_names(config.context_size)
+        
+    max_chain_length = max(config.depths)
+    depth = max_chain_length//2 + 2
+    
+    trees = []
+    cmpt = 0
+    while method_names:
+        if cmpt % 4 == 0:
+            root = method_tree.build_unbalanced_binary_tree_v2(depth, max_chain_length, method_names)
+            if root:
+                trees.append(root)
+        elif cmpt % 4 == 1:
+            root = method_tree.build_unbalanced_binary_tree_v3(depth, max_chain_length, method_names)
+            if root:
+                trees.append(root)
+        elif cmpt % 4 == 2:
+            root = method_tree.build_unbalanced_binary_tree(max_chain_length, method_names)
+            if root:
+                trees.append(root)
+        else:
+            root, method_names = method_tree.build_binary_tree(3, method_names)
+            trees.append(root)
+        cmpt += 1
+        
+    # Verification of unicity of method names across trees:
+    all_method_names = []
+
+    for root_it in trees:
+        all_method_names.extend(root_it.get_method_names())
+    
+    if not len(all_method_names) == len(set(all_method_names)):
+        raise ValueError(f"Method names not unique across trees for dir {dir}")
+        
+    method_tree.write_trees_to_files(trees, dir)
+        
+    return trees, all_method_names
     
 def generate_tree_method_calls(trees:list, config: TreeCallExperimentConfig = None):
     """Generate a list of Java method bodies that call each other in a tree like structure.
