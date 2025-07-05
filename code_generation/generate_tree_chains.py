@@ -309,10 +309,10 @@ def find_all_invalid_chains(trees:list) -> tuple[list, list]:
     
     # print(f"Total invalid chains found: {len(all_invalid_chains)}")
     
-    generate_questions_from_invalid_chains(all_invalid_chains)
+    all_invalid_chains = generate_questions_from_invalid_chains(all_invalid_chains)
     
     chain_distances = gen.count_distances(all_invalid_chains)
-    print(f"Chain distances: {chain_distances}")
+    # print(f"Chain distances: {chain_distances}")
     
     return all_invalid_chains
 
@@ -341,20 +341,26 @@ def generate_questions_from_invalid_chains(chains:list, max_chain_length:int = N
         chains (list): A list of invalid chains to generate questions from.
         max_chain_length (int): The maximum length of the chains to consider.
     """
+    generated_questions = []
     
-    # TODO : à vérifier
     for item in chains:
-        # print("To verify:", item)
         for unreachable in item["unreachable_methods"]:
             if max_chain_length is None or len(item["chain"]) <= max_chain_length:
+                # Make a copy of the item
+                new_item = item.copy()
+                new_item.pop("unreachable_methods", None)  # Remove the field if it exists
+                
                 question = (
                     f"Does `{item['node']}` call `{unreachable}`, either directly or indirectly? "
                     f"Think step-by-step by following the method calls from `{item['node']}`."
                 )
                 
-                item["question"] = question          
+                new_item["question"] = question 
+                new_item["target_method"] = unreachable
+                
+                generated_questions.append(new_item)
 
-    return
+    return generated_questions
 
 def write_chains_to_file(questions:list, filename:str):
     """Write all chains from the questions list to a file, one per line."""
