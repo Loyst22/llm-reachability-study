@@ -115,7 +115,7 @@ def generate_many_call_trees(dir:str, tree_depth:int, n_trees:int):
     trees = []
     for i in range(n_trees):
         # print(f"Generating tree {i+1}/{n_trees} with depth {tree_depth}")
-        tree = generate_single_call_tree_from_names(tree_depth, method_names[i * (2**(tree_depth + 1) - 1):(i + 1) * (2**(tree_depth + 1) - 1)])
+        tree, _ = generate_single_call_tree_from_names(tree_depth, method_names[i * (2**(tree_depth + 1) - 1):(i + 1) * (2**(tree_depth + 1) - 1)])
         trees.append(tree)
         
     method_tree.write_trees_to_files(trees, dir)

@@ -42,7 +42,7 @@ class Node:
     def get_method_names(self):
         methods_names, *rest = depth_first_traversal(self)
         return methods_names
-
+                    
 def write_trees_to_files(trees: list, dir: str):
     """Write individual tree files and a cumulative file."""
     Path(f"{dir}/tree_structures").mkdir(parents=True, exist_ok=True)
@@ -57,29 +57,30 @@ def write_trees_to_files(trees: list, dir: str):
             with open(individual_path, 'r') as tree_f:
                 file.write(tree_f.read())
 
-def build_binary_tree(depth: int, method_names: list, index: int = 0, parent: Node = None) -> Node:
+def build_binary_tree(depth: int, method_names: list[str], index: int = 0, parent: Node = None) -> tuple[Node, list[str]]:
     """Build a binary tree from a list of method names.
 
     Args:
-        depth (int): Description of the depth of the tree.
+        depth (int): Depth of the tree.
         method_names (list): A list of method names to be used as node names in the tree.
         index (int, optional): Used to track the current index in the method_names list while building the tree. Defaults to 0.
         parent (Node, optional): The parent node of the current node. Defaults to None        
         
     Returns:
-        Node: _description_
+        tuple: The root of the binary tree, and the list of remaining method names
     """
     if depth < 0 or index >= len(method_names):
-        return None
+        return None, method_names[index:]
     
     name = method_names[index]
     node = Node(name=name, parent=parent)
     
-    node.left = build_binary_tree(depth - 1, method_names, 2 * index + 1, node)
-    node.right = build_binary_tree(depth - 1, method_names, 2 * index + 2, node)
+    node.left, remaining_left = build_binary_tree(depth - 1, method_names, 2 * index + 1, node)
+    node.right, remaining_right = build_binary_tree(depth - 1, method_names, 2 * index + 2, node)
     
-    return node
-
+    remaining_methods = remaining_left if len(remaining_left) < len(remaining_right) else remaining_right
+    
+    return node, remaining_methods
 
 def depth_first_traversal(node: Node):
     """Perform a depth-first traversal of the tree.
