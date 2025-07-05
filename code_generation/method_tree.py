@@ -105,6 +105,107 @@ def build_unbalanced_binary_tree(max_distance: int, method_names: list) -> Node:
     
     return root
 
+
+def build_unbalanced_binary_tree_v2(depth: int, max_distance: int, method_names: list) -> Node:
+    """Build an unbalanced binary tree from a list of method names.
+
+    Args:
+        depth (int): Depth of the tree
+        max_distance (int): The maximum distance for which we wish to ask negative questions.
+        method_names (list): A list of method names to be used as node names in the tree.
+        
+    Returns:
+        Node: The root of the binary tree
+    """
+    if not method_names:
+        return
+        
+    current_index = 0
+    root = Node(method_names.pop(0))
+    current_index += 1
+    current_node = root
+    
+    depth_iter = depth
+    
+    while depth_iter > 0:
+        if not method_names:
+            return root
+        
+        current_node.left = Node(method_names.pop(0), current_node)
+        current_index += 1
+        current_node = current_node.left
+        depth_iter -= 1
+    if current_index < max_distance:
+        current_node = current_node.parent
+    while current_index - 1 < max_distance and current_node is not None:
+        if not method_names:
+            return root
+        
+        current_node.right = Node(method_names.pop(0), current_node)
+        current_index += 1
+        current_node = current_node.parent
+    
+    if current_node is None:
+        return root
+    
+    # else:
+    #     current_node.right = build_binary_tree(depth, method_names[current_index:])
+    #     current_node.right.parent = current_node
+        
+    
+    return root
+
+def build_unbalanced_binary_tree_v3(depth: int, max_distance: int, method_names: list) -> Node:
+    """Build an unbalanced binary tree from a list of method names.
+
+    Args:
+        depth (int): Depth of the tree
+        max_distance (int): The maximum distance for which we wish to ask negative questions.
+        method_names (list): A list of method names to be used as node names in the tree.
+        
+    Returns:
+        Node: The root of the binary tree
+    """
+    if not method_names:
+        return
+    
+    current_index = 0
+    root = Node(method_names.pop(0))
+    current_index += 1
+    current_node = root
+    
+    depth_iter = depth
+    
+    while depth_iter > 0:
+        if not method_names:
+            return root
+    
+        current_node.left = Node(method_names.pop(0), current_node)
+        current_index += 1
+        current_node = current_node.left
+        depth_iter -= 1
+    if current_index < max_distance + 2:
+        current_node = current_node.parent
+        current_node = current_node.parent
+        
+    while current_index < max_distance + 2 and current_node is not None:
+        if not method_names:
+            return root
+        
+        current_node.right = Node(method_names.pop(0), current_node)
+        current_index += 1
+        current_node = current_node.parent
+    
+    if current_node is None:
+        return root
+    # else:
+    #     root.right = build_binary_tree(depth, method_names[current_index:])
+    #     root.right.parent = root
+        
+    
+    return root
+
+    
 def build_left_branch(root: Node, depth: int, method_names: list):
     if depth < 0 or not method_names: 
         return
