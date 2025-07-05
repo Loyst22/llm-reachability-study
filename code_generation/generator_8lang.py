@@ -867,19 +867,35 @@ class ExperimentRunner:
                                    experiment_type: str = "linear") -> None:
         """Generate multiple experiments for different context sizes"""
         for context_size in context_ranges:
-            config = ExperimentConfig(
-                name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
-                context_size=context_size,
-                depths=list(range(1, 11)),
-                n_questions= 200,
-                n_padding=0,
-                n_comment_lines=n_comments,
-                n_vars=n_vars,
-                n_loops=n_loops,
-                n_if=n_if,
-                language=language,
-                type=experiment_type
-            )
+            if experiment_type == "linear":
+                config = LinearCallExperimentConfig(
+                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
+                    context_size=context_size,
+                    depths=list(range(1, 11)),
+                    n_questions= 200,
+                    n_padding=0,
+                    n_comment_lines=n_comments,
+                    n_vars=n_vars,
+                    n_loops=n_loops,
+                    n_if=n_if,
+                    language=language,
+                    type=experiment_type
+                )
+            
+            elif experiment_type == "tree":
+                config = TreeCallExperimentConfig(
+                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
+                    context_size=context_size,
+                    depths=list(range(1, 11)),
+                    n_questions= 200,
+                    n_padding=0,
+                    n_comment_lines=n_comments,
+                    n_vars=n_vars,
+                    n_loops=n_loops,
+                    n_if=n_if,
+                    language=language,
+                    type=experiment_type
+                )
             
             self.generate_experiment(config)
             
