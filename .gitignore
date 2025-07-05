@@ -2,6 +2,7 @@
 __pycache__
 *.slurm
 scripts
+test_scripts
 notes
 
 # Ignore generated files

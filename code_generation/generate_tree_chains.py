@@ -172,16 +172,20 @@ def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExper
     
     comment = comments_generation.generate_lorem_ipsum_comments(config.n_comment_lines, config.language)
     
-    if subtree.left is None and subtree.right is None:
-        method_body = control_flow.generate_method_body(next_methods=None,
+    next_methods = []
+    
+    if subtree.left is not None:
+        next_methods.append(subtree.left.name)
+    if subtree.right is not None:
+        next_methods.append(subtree.right.name)
+        
+    if len(next_methods) == 0:
+        next_methods = None
+    
+    method_body = control_flow.generate_method_body(next_methods=next_methods,
                                                    n_vars=config.n_vars,
                                                    n_loops=config.n_loops,
                                                    n_if=config.n_if)
-    else: 
-        method_body = control_flow.generate_method_body([subtree.left.name, subtree.right.name],
-                                                   config.n_vars,
-                                                   config.n_loops,
-                                                   config.n_if) 
 
     comment = "\t" + comment.replace("\n", "\n\t")
     method_body = "\t" + method_body.replace("\n", "\n\t")
