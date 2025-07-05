@@ -448,6 +448,8 @@ class QuestionGenerator:
         """Select up to n questions with a specified distance"""
         filtered = [q for q in questions_with_distances if q["distance"] == distance]
         return random.sample(filtered, min(n, len(filtered)))
+            
+        
 
 
 class FileWriter:
@@ -663,7 +665,66 @@ class ExperimentRunner:
             max_chain_length = (2**(tree_depth + 1) - 1)
         
         for depth in range(max_chain_length + 1):
-            # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
+            selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, n_questions))
+            selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, n_questions))
+        
+        distance_dict = self.count_distances(selection)
+    
+        min_amount_of_questions = n_questions
+
+        for value in distance_dict.values():
+            if value < min_amount_of_questions:
+                min_amount_of_questions = value
+
+        selection = []
+        
+        for depth in range(max_chain_length + 1):
+            selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, min_amount_of_questions))
+            selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, min_amount_of_questions))
+    
+        the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
+        
+        if config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_tree_calls
+        if config.n_if <= 2 or config.n_loops <= 2:
+            prompt = prompts.in_context_control_flow_2_tree_calls
+        else:
+            prompt = prompts.in_context_tree_calls
+
+        # Use language-specific file extension
+        class_filename = f"TheClass{lang_generator.get_file_extension()}"
+        self.file_writer.write_class_to_file(the_class, directory / class_filename)
+        self.file_writer.write_prompt_to_file(prompt, the_class, directory / "system.txt")
+        self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
+        self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
+        self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
+        
+        return min_amount_of_questions
+    
+    def generate_single_tree_context_v2(self, directory:str, config:TreeCallExperimentConfig, n_questions:int = 400) -> int:
+        """Generate an experiment with multiple trees and save the class to a file.
+
+        Args:
+            directory (str): The name of the experiment.
+            config (TreeCallExperimentConfig): Configuration for the experiment
+            n_questions (int): Max number of questions to generate
+            
+        Returns:
+            int: The actual number of questions generated
+        """        
+        lang_generator = LanguageFactory.get_generator(config.language)
+                
+        # trees, method_names = gen_tree.generate_many_call_trees(directory, tree_depth, n_trees)
+        trees, method_names = gen_tree.generate_many_call_trees_v2(directory, config)
+        print("using correct one logically")
+        valid_questions = gen_tree.find_all_valid_chains(trees=trees)
+        invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
+        
+        selection = []
+       
+        max_chain_length = max(config.depths)
+        
+        for depth in range(max_chain_length + 1):
             selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, n_questions))
             # TODO : see if we can manage to get negative questions for all distances
             selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, n_questions))
@@ -682,9 +743,6 @@ class ExperimentRunner:
             selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, min_amount_of_questions))
             selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, min_amount_of_questions))
     
-        # print(f"Selected {len(selection)} questions")
-        # print(f"Questions per distance after selection: {self.count_distances(selection)}")
-
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
         
         if config.n_if == 1 or config.n_loops == 1:
@@ -817,21 +875,23 @@ class ExperimentRunner:
         
         chain_size = max(config.depths) + min(config.n_padding, 2)
         
-        # We need to define the number of trees and their depths
-        # To do so we use the chain size and find the appropriate tree depth
-        tree_depth = 0
-        methods_per_tree = 2**(tree_depth + 1) - 1
-        while methods_per_tree - 1 < chain_size:
-            tree_depth += 1
+        # Might be deprecated since we updated to a version that generates questions for all negative distances
+        while False: 
+            # We need to define the number of trees and their depths
+            # To do so we use the chain size and find the appropriate tree depth
+            tree_depth = 0
             methods_per_tree = 2**(tree_depth + 1) - 1
-            
-        # Now that we know the depth of the trees we must determine the number of trees to generate
-        # The number of trees must correspond to the context size of the config
-        methods_per_tree = 2**(tree_depth + 1) - 1
-        n_trees = ceil(config.context_size/methods_per_tree)
-        
-        if config.context_size < methods_per_tree * n_trees:
-            config.context_size = methods_per_tree * n_trees
+            while methods_per_tree - 1 < chain_size:
+                tree_depth += 1
+                methods_per_tree = 2**(tree_depth + 1) - 1
+
+            # Now that we know the depth of the trees we must determine the number of trees to generate
+            # The number of trees must correspond to the context size of the config
+            methods_per_tree = 2**(tree_depth + 1) - 1
+            n_trees = ceil(config.context_size/methods_per_tree)
+
+            if config.context_size < methods_per_tree * n_trees:
+                config.context_size = methods_per_tree * n_trees
         
         # We create new contexts until we have enough questions
         n_questions_left = config.n_questions
@@ -843,11 +903,14 @@ class ExperimentRunner:
             exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_qs-{context_counter}_{config.language}_tree"
             
             
-            # n_questions_generated = gen_tree.generate_exp(exp_dir, n_trees, tree_depth, max(config.depths), n_questions_left)
-            n_questions_generated = self.generate_single_tree_context(exp_dir, n_trees, tree_depth, config, max(config.depths), n_questions_left)
+            # n_questions_generated = self.generate_single_tree_context(exp_dir, n_trees, tree_depth, config, max(config.depths), n_questions_left)
+            n_questions_generated = self.generate_single_tree_context_v2(exp_dir, config, n_questions_left)
             n_questions_left -= n_questions_generated
             
-            print(f"\nGenerating {config.language} context of size {n_trees*methods_per_tree} for {2*n_questions_generated*len(config.depths)} questions")
+            directories.append(exp_dir)
+            
+            # print(f"\nGenerating {config.language} context of size {n_trees*methods_per_tree} for {2*n_questions_generated*len(config.depths)} questions") # not accurate for questions
+            print(f"\nGenerating {config.language} context of size {config.context_size} for {2*n_questions_generated*len(config.depths)} questions")
 
             context_counter += 1
             
