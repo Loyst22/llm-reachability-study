@@ -143,14 +143,14 @@ def run_one_prompt(dir, question, prompt, idx, model_with_name, distance):
     print(f"Finished prompt {idx} in: {dir}")
 
 def run_one_dir(dir, model_with_name):
-    print("Running in:", dir)
-    print("With model:", model_with_name[1])
-
     system_txt_path = os.path.join(dir, "system.txt")
     questions_path = os.path.join(dir, "reachability_questions.txt")
     if not os.path.exists(system_txt_path) or not os.path.exists(questions_path):
         print(f"Missing system.txt or reachability_questions.txt in {dir}, skipping")
-        return
+        return False
+    
+    print("Running in:", dir)
+    print("With model:", model_with_name[1])
     
     model_dir = os.path.join(dir, model_with_name[1])
     stderr_dir = os.path.join(model_dir, "stderr")
@@ -196,6 +196,8 @@ def run_one_dir(dir, model_with_name):
             os.rename(os.path.join(dir, filename), os.path.join(model_dir, filename))
         elif filename.startswith("stderr") and filename.endswith(".txt"):
             os.rename(os.path.join(dir, filename), os.path.join(stderr_dir, filename))
+            
+    return True
 
 
 def get_subdirectories(directory):
@@ -210,6 +212,7 @@ def run_experiment(directory, model_with_name):
     # Else, recurse into subdirectories
     for entry in os.listdir(directory):
         full_path = os.path.join(directory, entry)
+        # Check if it's a dir: if it's a simple file do not recurse into it
         if os.path.isdir(full_path):
             run_experiment(full_path, model_with_name)
 
