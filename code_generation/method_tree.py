@@ -82,6 +82,36 @@ def build_binary_tree(depth: int, method_names: list[str], index: int = 0, paren
     
     return node, remaining_methods
 
+def build_unbalanced_binary_tree(max_distance: int, method_names: list) -> Node:
+    """Build an unbalanced binary tree from a list of method names.
+
+    Args:
+        max_distance (int): The maximum distance for which we wish to ask negative questions.
+        method_names (list): A list of method names to be used as node names in the tree.
+        
+    Returns:
+        Node: The root of the binary tree
+    """
+    if not method_names:
+        return
+    
+    depth = max_distance
+    root = Node(method_names.pop(0))
+    
+    build_left_branch(root, depth, method_names)
+    
+    # root.right = build_binary_tree(depth-1, method_names)
+    # root.right.parent = root
+    
+    return root
+
+def build_left_branch(root: Node, depth: int, method_names: list):
+    if depth < 0 or not method_names: 
+        return
+
+    root.left = Node(method_names.pop(0), root)
+    build_left_branch(root.left, depth-1, method_names)
+
 def depth_first_traversal(node: Node):
     """Perform a depth-first traversal of the tree.
 
