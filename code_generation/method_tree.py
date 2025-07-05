@@ -11,8 +11,9 @@ class Node:
         if self is None:
             return
         print(indent + self.name)
-        if self.left or self.right:
+        if self.left:
             self.left.print_tree(indent + "   L- ")
+        if self.right:
             self.right.print_tree(indent + "   R- ")
 
     def write_tree_to_file(self, file_path: str):
@@ -30,6 +31,18 @@ class Node:
         with open(file_path, 'w') as f:
             write_node(self)
             
+    def get_subtree_size(self):
+        size = 1
+        if self.left is not None:
+            size += self.left.get_subtree_size()
+        if self.right is not None:
+            size += self.right.get_subtree_size()
+        return size
+    
+    def get_method_names(self):
+        methods_names, *rest = depth_first_traversal(self)
+        return methods_names
+
 def write_trees_to_files(trees: list, dir: str):
     """Write individual tree files and a cumulative file."""
     Path(f"{dir}/tree_structures").mkdir(parents=True, exist_ok=True)
@@ -108,7 +121,6 @@ def depth_first_traversal(node: Node):
     # print(f"Depth-first traversal completed. Distance: {counter}. With backtracking: {counter_with_backtracking}. Height: {relative_height}")
     
     return method_names, counter, counter_with_backtracking, relative_height       
-        
 
 def depth_first_search(node: Node, search_node: Node):
     """Perform a depth-first search of the tree.
@@ -187,6 +199,9 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     """
     if chains is None:
         chains = []
+        
+    if node is None:
+        return []
     
     # If the node is a leaf node (no children), return an empty list
     if node.left is None and node.right is None:
