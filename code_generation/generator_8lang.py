@@ -716,7 +716,6 @@ class ExperimentRunner:
                 
         # trees, method_names = gen_tree.generate_many_call_trees(directory, tree_depth, n_trees)
         trees, method_names = gen_tree.generate_many_call_trees_v2(directory, config)
-        print("using correct one logically")
         valid_questions = gen_tree.find_all_valid_chains(trees=trees)
         invalid_questions = gen_tree.find_all_invalid_chains(trees=trees)
         
@@ -935,7 +934,7 @@ class ExperimentRunner:
                     name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
                     context_size=context_size,
                     depths=list(range(1, 11)),
-                    n_questions= 200,
+                    n_questions= 400,
                     n_padding=0,
                     n_comment_lines=n_comments,
                     n_vars=n_vars,
@@ -950,7 +949,7 @@ class ExperimentRunner:
                     name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
                     context_size=context_size,
                     depths=list(range(1, 11)),
-                    n_questions= 200,
+                    n_questions= 400,
                     n_padding=0,
                     n_comment_lines=n_comments,
                     n_vars=n_vars,
