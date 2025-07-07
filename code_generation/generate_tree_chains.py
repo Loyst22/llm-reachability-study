@@ -88,7 +88,6 @@ def generate_single_call_tree(tree_depth:int):
     n_methods = 2**(tree_depth + 1) - 1
     method_names = gen.generate_unique_method_names(n_methods)
     # print(f"Generating a tree with {n_methods} methods and depth {tree_depth}")
-    # print("Method names:", method_names)
     root = method_tree.build_binary_tree(tree_depth, method_names)
     return root
 
@@ -100,7 +99,6 @@ def generate_single_call_tree_from_names(tree_depth:int, method_names:list):
         method_names (list): A list of method names to be used in the tree structure.
     """
     # print(f"Generating a tree with {len(method_names)} methods and depth {tree_depth}")
-    # print("Method names:", method_names)
     root = method_tree.build_binary_tree(tree_depth, method_names)
     return root
 
@@ -119,9 +117,6 @@ def generate_many_call_trees(dir:str, tree_depth:int, n_trees:int):
         trees.append(tree)
         
     method_tree.write_trees_to_files(trees, dir)
-    
-    # for tree in trees:
-    #     tree.write_tree_to_file(f"{dir}/tree_structures/tree_structure_{trees.index(tree)}.txt")
         
     return trees, method_names
 
@@ -153,7 +148,7 @@ def generate_many_call_trees_v2(dir: str, config: TreeCallExperimentConfig):
             if root:
                 trees.append(root)
         else:
-            root, method_names = method_tree.build_binary_tree(3, method_names)
+            root = method_tree.build_binary_tree(3, method_names)
             trees.append(root)
         cmpt += 1
         
@@ -245,10 +240,6 @@ def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list
         tree_depth (int): The depth of the tree to be generated.
     """
     
-    # print(f"Generating classes for trees :")
-    # for tree in trees:
-    #     tree.print_tree()
-    
     method_bodies = generate_tree_method_calls(trees)
     
     print(f"Generated {len(method_bodies)} method bodies")
@@ -327,10 +318,6 @@ def find_all_valid_chains(trees:list) -> tuple[list, list]:
     for tree in trees:
         chains = method_tree.find_all_valid_chains_depth_first(tree)
         all_valid_chains.extend(chains)
-        # print(f"Found {len(chains)} valid chains in tree {trees.index(tree) + 1}")
-        # print(f"Chains found in tree {trees.index(tree) + 1}: {chains}")
-    
-    # print(f"Total valid chains found: {len(all_valid_chains)}")
     
     generate_questions_from_valid_chains(all_valid_chains)
     
@@ -353,14 +340,10 @@ def find_all_invalid_chains(trees:list) -> tuple[list, list]:
     for tree in trees:
         invalid_chains = method_tree.find_all_invalid_chains_depth_first(tree)
         all_invalid_chains.extend(invalid_chains)
-        # print(f"Found {len(invalid_chains)} invalid chains in tree {trees.index(tree) + 1}")
-        # print(f"Invalid chains found in tree {trees.index(tree) + 1}: {invalid_chains}")
-    
-    # print(f"Total invalid chains found: {len(all_invalid_chains)}")
     
     all_invalid_chains = generate_questions_from_invalid_chains(all_invalid_chains)
     
-    chain_distances = gen.count_distances(all_invalid_chains)
+    # chain_distances = gen.count_distances(all_invalid_chains)
     # print(f"Chain distances: {chain_distances}")
     
     return all_invalid_chains

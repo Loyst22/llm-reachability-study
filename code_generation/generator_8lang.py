@@ -621,9 +621,9 @@ class ExperimentRunner:
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, depth, n_questions))
             selection.extend(self.question_generator.select_questions_by_distance(all_questions, -depth, n_questions))
         
-        print(f"Chains:\n\tExpected total: {n_chains}\n\tGround truth: {len(all_chains)}")
-        print(f"Questions:\n\tExpected total: {2 * n_questions * len(config.depths)}\n\tGround truth: {len(selection)}")
-        print(f"Distance distribution: {self.count_distances(selection)}")
+        # print(f"Chains:\n\tExpected total: {n_chains}\n\tGround truth: {len(all_chains)}")
+        # print(f"Questions:\n\tExpected total: {2 * n_questions * len(config.depths)}\n\tGround truth: {len(selection)}")
+        # print(f"Distance distribution: {self.count_distances(selection)}")
 
         # Write all files
         directory.mkdir(parents=True, exist_ok=True)
@@ -811,8 +811,8 @@ class ExperimentRunner:
         # We need n questions per depth, each chain has a size of chain_size
         n_methods_needed = chain_size * config.n_questions
         
-        print()
-        print(f"Methods needed to generate enough questions: {n_methods_needed}")
+        # print()
+        # print(f"Methods needed to generate enough questions: {n_methods_needed}")
         
         # We also define the number of chains that fit wrt the context size
         n_chains_in_context = config.context_size // chain_size

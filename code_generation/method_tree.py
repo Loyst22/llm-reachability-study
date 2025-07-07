@@ -57,7 +57,7 @@ def write_trees_to_files(trees: list, dir: str):
             with open(individual_path, 'r') as tree_f:
                 file.write(tree_f.read())
 
-def build_binary_tree(depth: int, method_names: list[str], index: int = 0, parent: Node = None) -> tuple[Node, list[str]]:
+def build_binary_tree(depth: int, method_names: list[str], parent: Node = None) -> tuple[Node, list[str]]:
     """Build a binary tree from a list of method names.
 
     Args:
@@ -69,18 +69,18 @@ def build_binary_tree(depth: int, method_names: list[str], index: int = 0, paren
     Returns:
         tuple: The root of the binary tree, and the list of remaining method names
     """
-    if depth < 0 or index >= len(method_names):
-        return None, method_names[index:]
-    
-    name = method_names[index]
+    if depth < 0 or not method_names:
+        return None
+
+    # Pop the current method name
+    name = method_names.pop(0)
     node = Node(name=name, parent=parent)
-    
-    node.left, remaining_left = build_binary_tree(depth - 1, method_names, 2 * index + 1, node)
-    node.right, remaining_right = build_binary_tree(depth - 1, method_names, 2 * index + 2, node)
-    
-    remaining_methods = remaining_left if len(remaining_left) < len(remaining_right) else remaining_right
-    
-    return node, remaining_methods
+
+    # Build left and right subtrees, consuming names in-place
+    node.left = build_binary_tree(depth - 1, method_names, node)
+    node.right = build_binary_tree(depth - 1, method_names, node)
+
+    return node
 
 def build_unbalanced_binary_tree(max_distance: int, method_names: list) -> Node:
     """Build an unbalanced binary tree from a list of method names.
