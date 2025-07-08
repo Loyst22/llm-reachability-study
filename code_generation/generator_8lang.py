@@ -2,6 +2,7 @@ import os
 import random
 from pathlib import Path
 from collections import defaultdict
+from time import time
 from typing import List, Tuple, Callable
 from abc import ABC, abstractmethod
 from math import ceil
@@ -169,7 +170,6 @@ class JavaGenerator(LanguageGenerator):
             tree_depth (int): The depth of the tree to be generated.
         """
         
-        # method_bodies = gen_tree.generate_tree_method_calls(trees)
         method_bodies = gen_tree.generate_tree_method_calls(trees=trees, config=config)
     
         print(f"Generated {len(method_bodies)} method bodies")
@@ -687,7 +687,7 @@ class ExperimentRunner:
     
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
         
-        if config.n_if <= 2 or config.n_loops <= 2:
+        if config.n_if >= 2 or config.n_loops >= 2:
             prompt = prompts.in_context_control_flow_2_tree_calls
             # prompt = prompts.advanced_control_flow_2_tree_calls
         elif config.n_if == 1 or config.n_loops == 1:
@@ -750,7 +750,7 @@ class ExperimentRunner:
     
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
         
-        if config.n_if <= 2 or config.n_loops <= 2:
+        if config.n_if >= 2 or config.n_loops >= 2:
             prompt = prompts.in_context_control_flow_2_tree_calls
             # prompt = prompts.advanced_control_flow_2_tree_calls
         elif config.n_if == 1 or config.n_loops == 1:
@@ -968,12 +968,18 @@ class ExperimentRunner:
                     type=experiment_type
                 )
             
+            start_time = time.time()
             self.generate_experiment(config)
+            end_time = time.time()
+            
+            print(f"Experiment {config.name} generated in {end_time - start_time:.2f} seconds")
             
             # Commented for debugging purposes
             """
+            Path('slurms').mkdir(parents=True, exist_ok=True)
+            
             self.file_writer.write_slurm_script(
-                f'{language}_context_{context_size}_comments_{n_comments}',
+                f'slurms/{config.name}',
                 config.name,
                 config.time_limit
             )
