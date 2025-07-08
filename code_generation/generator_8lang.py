@@ -628,12 +628,15 @@ class ExperimentRunner:
         # Write all files
         directory.mkdir(parents=True, exist_ok=True)
         
-        if config.n_if == 1 or config.n_loops == 1:
-            prompt = prompts.in_context_control_flow_1_linear_calls
         if config.n_if >= 2 or config.n_loops >= 2:
             prompt = prompts.in_context_control_flow_2_linear_calls
+            # prompt = prompts.advanced_control_flow_2_linear_calls
+        elif config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_linear_calls
+            # prompt = prompts.advanced_control_flow_1_linear_calls
         else:
             prompt = prompts.in_context_linear_calls
+            # prompt = prompts.advanced_linear_calls
         
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
@@ -684,12 +687,15 @@ class ExperimentRunner:
     
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
         
-        if config.n_if == 1 or config.n_loops == 1:
-            prompt = prompts.in_context_control_flow_1_tree_calls
         if config.n_if <= 2 or config.n_loops <= 2:
             prompt = prompts.in_context_control_flow_2_tree_calls
+            # prompt = prompts.advanced_control_flow_2_tree_calls
+        elif config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_tree_calls
+            # prompt = prompts.advanced_control_flow_1_tree_calls
         else:
             prompt = prompts.in_context_tree_calls
+            # prompt = prompts.advanced_tree_calls
 
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
@@ -744,12 +750,15 @@ class ExperimentRunner:
     
         the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
         
-        if config.n_if == 1 or config.n_loops == 1:
-            prompt = prompts.in_context_control_flow_1_tree_calls
         if config.n_if <= 2 or config.n_loops <= 2:
             prompt = prompts.in_context_control_flow_2_tree_calls
+            # prompt = prompts.advanced_control_flow_2_tree_calls
+        elif config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_tree_calls
+            # prompt = prompts.advanced_control_flow_1_tree_calls
         else:
             prompt = prompts.in_context_tree_calls
+            # prompt = prompts.advanced_tree_calls
 
         # Use language-specific file extension
         class_filename = f"TheClass{lang_generator.get_file_extension()}"
@@ -872,7 +881,7 @@ class ExperimentRunner:
         base_dir = Path(config.name)
         directories = []
         
-        chain_size = max(config.depths) + min(config.n_padding, 2)
+        chain_size = max(config.depths) + max(config.n_padding, 2)
         
         # Might be deprecated since we updated to a version that generates questions for all negative distances
         while False: 
