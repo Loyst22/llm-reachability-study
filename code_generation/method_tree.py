@@ -1,11 +1,71 @@
 from pathlib import Path
+import control_flow
 
 class Node:
-    def __init__(self, name, parent=None, left=None, right=None):
-        self.name = name      # Name of java method
-        self.parent = parent  # Parent node
-        self.left = left      # Left child node
-        self.right = right    # Right child node
+    """
+    A class representing a node in a binary tree.
+    Each node is actually respresenting a function.
+    
+    Attributes:
+        name (str): Name of the function/method.
+        parent (Node): Parent node in the tree.
+        left (Node): Left child node.
+        right (Node): Right child node.
+        params (list[Variable]): List of parameters for the method.
+        variables (list[Variable]): List of variables defined in the body of the method.
+        return_type (str): Return type of the method.
+        var_types (list[str]): List of variable types used in the method. (params + local variables)
+        all_variables (list[Variable]): List of variables defined/used in the method.
+    """
+    def __init__(self, name: str, n_params: int = 0, n_vars: int = 0, parent=None, left=None, right=None):
+        self.name = name
+        self.parent = parent
+        self.left = left
+        self.right = right
+        
+        # ! Be careful with building that at init, parents might get added later
+        # ! atm there is no issue with that, but it might break in the future
+        if parent is None:
+            self.params = control_flow.random_variables(n_params)
+        else:
+            self.params = control_flow.choose_n_vars(n_params, parent.all_variables)
+        
+        # Get names of all param variables to avoid duplication
+        param_names = {var.name for var in self.params}
+        self.variables = []
+        
+        while len(self.variables) < n_vars:
+            additional_vars = control_flow.random_variables(n_vars - len(self.variables))
+            self.variables.extend([var for var in additional_vars if var.name not in param_names and var.name not in {v.name for v in self.variables}])
+        
+        self.all_variables = self.variables + self.params # Add parameters to the list of variables
+        
+        self.var_types = [var.var_type for var in self.variables]
+        
+        # Unused atm
+        """ 
+        if return_type is None:
+            self.return_type = "void"    
+        else:
+            self.return_type = return_type  # Return type of the method (if any)
+        """
+        
+    def __str__(self):
+        parent_name = self.parent.name if self.parent else "None"
+        left_name = self.left.name if self.left else "None"
+        right_name = self.right.name if self.right else "None"
+        param_types = [var.var_type for var in self.params]
+        variable_types = [var.var_type for var in self.variables]
+
+        return (
+            f"Node(name={self.name}, "
+            f"parent={parent_name}, "
+            f"left={left_name}, "
+            f"right={right_name}, "
+            f"param_types={param_types}, "
+            f"variable_types={variable_types}),"
+            f"variables={self.variables}"
+        )
 
     def print_tree(self, indent: str = ""):
         if self is None:
@@ -39,9 +99,21 @@ class Node:
             size += self.right.get_subtree_size()
         return size
     
+    def get_list_of_nodes(self):
+        nodes = [self]
+        if self.left is not None:
+            nodes.extend(self.left.get_list_of_nodes())
+        if self.right is not None:
+            nodes.extend(self.right.get_list_of_nodes())
+        return nodes
+    
     def get_method_names(self):
         methods_names, *rest = depth_first_traversal(self)
         return methods_names
+    
+    def get_number_of_variables(self):
+        """Get the number of variables defined/used in the method."""
+        return len(self.all_variables)
                     
 def write_trees_to_files(trees: list, dir: str):
     """Write individual tree files and a cumulative file."""
