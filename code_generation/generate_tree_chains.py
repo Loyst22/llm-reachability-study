@@ -164,6 +164,80 @@ def generate_many_call_trees_v2(dir: str, config: TreeCallExperimentConfig):
     method_tree.write_trees_to_files(trees, dir)
         
     return trees, all_method_names
+
+def generate_many_call_trees_v3(dir: str, config: TreeCallExperimentConfig):
+    """Generate a list of method bodies that call each other in a tree-like structure.
+
+    Args:
+        tree_depth (int): The depth of the tree to be generated.
+        n_trees (int): The number of trees to generate.
+    """
+    method_names = gen.generate_unique_method_names(config.context_size)
+    
+    max_chain_length = max(config.depths)
+    comb_depth = max_chain_length//2 + 2
+    size_of_comb = 2*comb_depth + 1
+    size_of_four_combs = 8*comb_depth + 2
+    size_of_jellyfish = size_of_four_combs + 3
+    size_of_double_comb = size_of_four_combs/2 + 1
+    max_k_depth = 4 # TODO: Maybe find a better one (that depends on the rest)
+    shape = ["left", "right"]
+    
+    trees = []
+    while method_names:
+        if len(method_names) >= size_of_jellyfish:
+            remaining_size = len(method_names) - size_of_four_combs
+            k_depth = 1
+            k_size = 2**(k_depth+1) - 1
+            while k_size <= remaining_size:
+                k_depth += 1
+                k_size = 2**(k_depth+1) - 1
+                if k_depth > max_k_depth:
+                    k_depth = max_k_depth + 1
+                    break # Stop the inner while
+            k_depth -= 1 
+            print("Generating Jellyfish tree")
+            root = method_tree.build_jellyfish_tree(k_depth, k_depth, max_chain_length, method_names, shape=shape)
+        elif len(method_names) >= size_of_double_comb:
+            print("Generating Double-Comb tree")
+            root = method_tree.build_double_comb(max_chain_length, method_names, shape=shape)
+        elif len(method_names) >= size_of_comb:
+            if random.random() > 0.5:
+                print("Generating Comb tree")
+                root = method_tree.build_comb_tree(comb_depth, max_chain_length, method_names, shape=shape)
+            else:
+                print("Generating Near-Comb tree")
+                root = method_tree.build_near_comb_tree(comb_depth, max_chain_length, method_names, shape=shape)
+        else:
+            remaining_size = len(method_names)
+            k_depth = 0
+            k_size = 2**(k_depth+1) - 1
+            while k_size <= remaining_size:
+                k_depth += 1
+                k_size = 2**(k_depth+1) - 1
+            # k_depth -= 1
+            print("Generating Binary tree")
+            root = method_tree.build_binary_tree(k_depth, method_names)
+                        
+        
+        if root:
+            trees.append(root)
+        shape = shape[::-1]
+    
+        print(f"Size of tree generated is: {root.get_subtree_size()}")
+        
+    # Verification of unicity of method names across trees:
+    all_method_names = []
+
+    for root_it in trees:
+        all_method_names.extend(root_it.get_method_names())
+    
+    if not len(all_method_names) == len(set(all_method_names)):
+        raise ValueError(f"Method names not unique across trees for dir {dir}")
+        
+    method_tree.write_trees_to_files(trees, dir)
+        
+    return trees, all_method_names
     
 def generate_tree_method_calls(trees:list, config: TreeCallExperimentConfig = None):
     """Generate a list of Java method bodies that call each other in a tree like structure.
