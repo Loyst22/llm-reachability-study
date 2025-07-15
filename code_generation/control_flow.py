@@ -2,6 +2,8 @@ from math import ceil
 import random
 import generate_chain as generate_chain
 
+supported_types = ["int", "long", "boolean", "double"]
+
 # Simple data structure to hold variable information
 class Variable:
     def __init__(self, name, var_type, value):
@@ -26,6 +28,11 @@ class Variable:
                               "text", "path", "file", "error", "status", "response",
                               "user", "message", "token", "config", "option", "mode"])
     
+    @staticmethod
+    def random_variable_type() -> str:
+        """Randomly pick a variable type."""
+        return random.choice(supported_types)
+    
 """ Random generation functions for control flow in Java methods. """
 
 def is_var_in_list(var: Variable, list: list) -> bool:
@@ -35,8 +42,8 @@ def is_var_in_list(var: Variable, list: list) -> bool:
 def random_variable(var_type: str = None) -> Variable:
     """Generate a random variable with a type and value."""
     var_name = Variable.random_variable_name()
-    if var_type is None or var_type not in ["int", "long", "boolean", "double"]:
-        var_type = random.choice(["int", "long", "boolean", "double"])
+    if var_type is None or var_type not in supported_types:
+        var_type = random.choice(supported_types)
     
     if var_type == "int" or var_type == "long":
         value = random.randint(1, 10)
@@ -104,9 +111,9 @@ def random_true_condition(variables: list, complexity: int = 0) -> str:
                 # For int, ensure the condition is true based on the value of the variable
                 delta = random.randint(1, 5) # To avoid situation like 5 <= 5...
                 if var.value <= 5:
-                    return f"{var.name} <= {var.value + delta}"  # x <= x + delta where x is <= value
+                    return f"{var.name} <= {var.value + delta}"  # x <= x + delta where x is <= 5
                 else:
-                    return f"{var.name} >= {var.value - delta}"  # x >= x - delta where x is > value
+                    return f"{var.name} >= {var.value - delta}"  # x >= x - delta where x is > 5
 
             case "boolean":
                 # For boolean, create a condition that evaluates to true
@@ -204,7 +211,8 @@ def random_true_if(variables: list, next_method: str = None) -> str:
     """Generate a random if statement"""
     condition = random_true_condition(variables)
     if next_method is not None:
-        return f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}"
+        # return f"\tif ({condition}) {{\n\t{method_call(next_method)}\n\t}}"
+        return f"\tif ({condition}) {{\n\t\t{next_method}\n\t}}"
     else:
         var = random.choice(variables)
         return f"\tif ({condition}) {{\n\t\tSystem.out.println({var.name});\n\t}}"
@@ -232,22 +240,113 @@ def random_loop(next_method: str = None, nb_while: int = 0) -> tuple[str, str]:
         if next_method is None:
             return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t\tSystem.out.println(i);\n\t}}", "for"
         else:
-            return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t{method_call(next_method)}\n\t}}", "for"
+            # return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t{method_call(next_method)}\n\t}}", "for"
+            return f"\tfor (int i = 0; i < {random.randint(1, 5)}; i++) {{\n\t\t{next_method}\n\t}}", "for"
     else:  # while loop
         if nb_while == 0:
             if next_method is None:
                 return f"\tint counter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
             else:
-                return f"\tint counter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"
+                # return f"\tint counter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"
+                return f"\tint counter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\t{next_method}\n\t\tcounter++;\n\t}}", "while"
         else:
             if next_method is None:
                 return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\tSystem.out.println(counter);\n\t\tcounter++;\n\t}}", "while"
             else:
-                return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"                
+                # return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"                
+                return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\t{next_method}\n\t\tcounter++;\n\t}}", "while"                
             
+def random_param_types(n_params: int = 1) -> list:
+    """Generate a list of random parameter types for a method.
+    
+    Args:
+        n_params (int): number of parameters to generate
+    
+    Returns:
+        list: list of parameter types as strings    
+    """
+    param_types = []
+    
+    for _ in range(n_params):
+        param_types.append(Variable.random_variable_type())
+    
+    return param_types
+
+def random_variables(n_vars: int = 1) -> list[Variable]:
+    """Generate a list of random variables.
+    
+    Args:
+        n_vars (int): number of variables to generate
+        
+    Returns:
+        list[Variable]: list of Variable objects with random names, types and values
+    """
+    variables = []
+    
+    for _ in range(n_vars):
+        var = random_variable(type)
+        while is_var_in_list(var, variables):
+            var = random_variable(type)
+        variables.append(var)
+    
+    return variables
+
+def choose_n_vars(n_vars: int, variables: list[Variable]) -> list[Variable]:
+    """Choose a number of variables from a list.
+    
+    Args:
+        n_vars (int): number of variables to choose
+        variables (list[Variable]): list of Variable objects to choose from
+        
+    Returns: 
+        list[Variable]: list of chosen Variable objects
+    """
+    if n_vars <= 0:
+        return []
+    
+    if n_vars > len(variables):
+        raise ValueError("n_vars cannot be greater than the number of available variables.")
+    
+    return random.sample(variables, n_vars)
+
+def choose_n_vars_from_types(var_types: list[str], variables: list[Variable]) -> list[Variable]:
+    """Choose variables from a list based on a list of var_types.
+    
+    Args:
+        var_types (list[str]): list of types of variables to choose
+        variables (list[Variable]): list of Variable objects to choose from
+        
+    Returns: 
+        list[Variable]: list of chosen Variable objects
+    """
+    if not var_types:
+        return []
+    
+    chosen_vars = []
+    used_names = set()
+
+    for var_type in var_types:
+        # Filter variables by type and unused names
+        filtered_vars = [
+            var for var in variables
+            if var.var_type == var_type and var.name not in used_names
+        ]
+        if filtered_vars:
+            var = random.choice(filtered_vars)
+            chosen_vars.append(var)
+            used_names.add(var.name)
+
+    return chosen_vars
+
 """ Method body generation functions. """
 
-def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: int = 0, n_if: int = 0) -> str:
+def generate_method_body(
+    next_methods: list[str] = [],
+    vars: list[Variable] = [], 
+    all_vars: list[Variable] = [],
+    n_loops: int = 0, 
+    n_if: int = 0
+    ) -> str:
     """Generate a method body with simple control flow, declarations, and method calls.
     
     Args: 
@@ -260,12 +359,21 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
         str: Java method body with variable declarations, conditions, and method calls
     """
     body = []
-    variables = []
+    variables = all_vars
     control_flow = []
     
     if next_methods is None:
         next_methods = []
-        
+    
+    # Declare the given variables
+    for var in vars:
+        if var.var_type == "boolean":
+            java_value = str(var.value).lower()
+            body.append(f"\t{var.var_type} {var.name} = {java_value};")
+        else:
+            body.append(f"\t{var.var_type} {var.name} = {var.value};")
+    
+    """
     # Declare random variables (can be empty)
     for _ in range(n_vars):  # Random number of variables to declare
         var = random_variable()
@@ -277,6 +385,7 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
             body.append(f"\t{var.var_type} {var.name} = {java_value};")
         else:    
             body.append(f"\t{var.var_type} {var.name} = {var.value};")
+    """
     
     end_of_chain = not next_methods
     
@@ -345,7 +454,7 @@ def generate_method_body(next_methods: list = None, n_vars: int = 0, n_loops: in
         if block_type == "plain":
             if next_methods and has_call:
                 next_method = next_methods.pop(0)
-                control_flow.append(f"\t{next_method}();")
+                control_flow.append(f"\t{next_method}")
         
         
     body.extend(control_flow)
