@@ -27,6 +27,7 @@ class ExperimentGUI:
                 ("Loops", "n_loops"),
                 ("Conditions", "n_if"),
                 ("Variables", "n_vars"),
+                ("Parameters", "n_params"),
                 ("Language", "language"),
             ],
             "linear": [],
@@ -93,6 +94,7 @@ class ExperimentGUI:
             n_loops = int(self.entries["n_loops"].get() or ExperimentConfig.DEFAULT_N_LOOPS)
             n_if = int(self.entries["n_if"].get() or ExperimentConfig.DEFAULT_N_IF)
             n_vars = int(self.entries["n_vars"].get() or ExperimentConfig.DEFAULT_N_VARS)
+            n_params = int(self.entries["n_params"].get() or ExperimentConfig.DEFAULT_N_PARAMS)
             language = self.entries["language"].get() or ExperimentConfig.DEFAULT_LANGUAGE
             
             if n_if != 0 and n_loops != 0 and n_vars == 0:
@@ -110,6 +112,7 @@ class ExperimentGUI:
                     n_loops=n_loops,
                     n_if=n_if,
                     n_vars=n_vars,
+                    n_params=n_params,
                     language=language,
                     type="linear"
                 )
@@ -128,6 +131,7 @@ class ExperimentGUI:
                     n_loops=n_loops,
                     n_if=n_if,
                     n_vars=n_vars,
+                    n_params=n_params,
                     language=language,
                     type="tree"
                     # tree_depth=tree_depth,

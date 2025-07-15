@@ -136,19 +136,19 @@ def generate_many_call_trees_v2(dir: str, config: TreeCallExperimentConfig):
     cmpt = 0
     while method_names:
         if cmpt % 4 == 0:
-            root = method_tree.build_unbalanced_binary_tree_v2(depth, max_chain_length, method_names)
+            root = method_tree.build_comb_graph(depth, max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
             if root:
                 trees.append(root)
         elif cmpt % 4 == 1:
-            root = method_tree.build_unbalanced_binary_tree_v3(depth, max_chain_length, method_names)
+            root = method_tree.build_near_comb_graph(depth, max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
             if root:
                 trees.append(root)
         elif cmpt % 4 == 2:
-            root = method_tree.build_unbalanced_binary_tree(max_chain_length, method_names)
+            root = method_tree.build_unbalanced_binary_tree(max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
             if root:
                 trees.append(root)
         else:
-            root = method_tree.build_binary_tree(3, method_names)
+            root = method_tree.build_binary_tree(3, method_names, n_params=config.n_params, n_vars=config.n_vars)
             trees.append(root)
         cmpt += 1
         
@@ -199,13 +199,14 @@ def generate_tree_method_calls_rec(tree: method_tree.Node, config: TreeCallExper
     
     return method_bodies
 
-def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExperimentConfig = None):
+def generate_single_method_body(node: method_tree.Node, config: TreeCallExperimentConfig = None):
+    param_string = ", ".join([f"{var.var_type} {var.name}" for var in (node.params or [])])
     if config is None: 
-        if subtree.left is None and subtree.right is None:
-            method_body = f"\tpublic void {subtree.name}() {{\n\t\t// End of chain\n\t}}"
+        if node.left is None and node.right is None:
+            method_body = f"\tpublic void {node.name}({param_string}) {{\n\t\t// End of chain\n\t}}"
         else:
-            method_body = f"\tpublic void {subtree.name}() {{\n\t\t{subtree.left.name}();\n\t\t{subtree.right.name}();\n\t}}"
-        return f"\tpublic void {subtree.name}() {{\n{method_body}\n\t}}"
+            method_body = f"\tpublic void {node.name}({param_string}) {{\n\t\t{node.left.name}();\n\t\t{node.right.name}();\n\t}}"
+        return f"\tpublic void {node.name}() {{\n{method_body}\n\t}}"
 
     if config.language.lower() != "java":
         raise ValueError("Tree call experiments only supports Java language")
@@ -214,22 +215,27 @@ def generate_single_method_body(subtree: method_tree.Node, config: TreeCallExper
     
     next_methods = []
     
-    if subtree.left is not None:
-        next_methods.append(subtree.left.name)
-    if subtree.right is not None:
-        next_methods.append(subtree.right.name)
-        
+    if node.left is not None:
+        var_types = [var.var_type for var in node.left.params or []]
+        call_params = control_flow.choose_n_vars_from_types(var_types, node.all_variables)
+        next_methods.append(f"{node.left.name}({', '.join([var.name for var in call_params])});")
+    if node.right is not None:
+        var_types = [var.var_type for var in node.right.params or []]
+        call_params = control_flow.choose_n_vars_from_types(var_types, node.all_variables)
+        next_methods.append(f"{node.right.name}({', '.join([var.name for var in call_params])});")
+    
     if len(next_methods) == 0:
         next_methods = None
     
     method_body = control_flow.generate_method_body(next_methods=next_methods,
-                                                   n_vars=config.n_vars,
+                                                   vars=node.variables,
+                                                   all_vars=node.all_variables,
                                                    n_loops=config.n_loops,
                                                    n_if=config.n_if)
 
     comment = "\t" + comment.replace("\n", "\n\t")
     method_body = "\t" + method_body.replace("\n", "\n\t")
-    return f"{comment}\n\tpublic void {subtree.name}() {{\n{method_body}\n\t}}"
+    return f"{comment}\n\tpublic void {node.name}({param_string}) {{\n{method_body}\n\t}}"
 
 
 def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list, method_names:list, selection:list):
@@ -260,7 +266,7 @@ def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list
     gen.write_questions_to_file(selection, dir / "reachability_questions.txt")
     gen.write_prompt_to_file(prompts.in_context_tree_calls, class_body, dir / "system.txt")
     
-def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None, n_questions:int = 100) -> int:
+def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int = None, n_questions:int = 400) -> int:
     """Generate an experiment with multiple trees and save the class to a file.
 
     Args:
@@ -282,9 +288,7 @@ def generate_exp(exp_name:str, n_trees:int, tree_depth:int, max_chain_length:int
     selection = []
                 
     for depth in range(max_chain_length + 1):
-        # TODO : choose a better number of questions to select (e.g. 100 is kind of arbitrary) 
         selection.extend(gen.select_n_of_distance(valid_questions, depth, n_questions))
-        # TODO : see if we can manage to get negative questions for all distances
         selection.extend(gen.select_n_of_distance(invalid_questions, -depth, n_questions))
         
     distance_dict = gen.count_distances(selection)

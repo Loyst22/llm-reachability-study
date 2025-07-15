@@ -16,6 +16,7 @@ class ExperimentConfig:
     n_vars: int = 0
     n_loops: int = 0
     n_if: int = 0
+    n_params: int = 0
     time_limit: str = "6:00:00"
     language: str = "java"  # Added language parameter
     type: str = "linear"
@@ -31,6 +32,7 @@ class ExperimentConfig:
     DEFAULT_N_LOOPS = 0
     DEFAULT_N_IF = 0
     DEFAULT_N_VARS = 0
+    DEFAULT_N_PARAMS = 0
     DEFAULT_LANGUAGE = "java"
     
     def __str__(self) -> str:
@@ -45,6 +47,7 @@ class ExperimentConfig:
             f"Variables:            {self.n_vars}\n"
             f"Loops:                {self.n_loops}\n"
             f"If Statements:        {self.n_if}\n"
+            f"Parameters:           {self.n_params}\n"
             f"Time Limit:           {self.time_limit}\n"
             f"Language:             {self.language}\n"
             f"Type:                 {self.type}\n"

@@ -10,6 +10,7 @@ from math import ceil
 import prompts
 import control_flow
 import comments_generation
+import method_tree
 import generate_tree_chains as gen_tree
 from experiment_config import ExperimentConfig, LinearCallExperimentConfig, TreeCallExperimentConfig
 
@@ -108,6 +109,9 @@ class LanguageGenerator(ABC):
         
         method_bodies = []
         
+        # !!! TODO : This doesn't support parameters and advanced control flow yet
+        # !!! BROCKEN : generate_method_body is not defined like this anymore
+        # TODO : Find a solution, maybe adapt chains so that they can work the same as tree chains (with all info in the tree)
         # Loop through the list of method names
         for i, method in enumerate(method_names):
             # Generate comments for this method if necessary
@@ -115,13 +119,13 @@ class LanguageGenerator(ABC):
 
             if i < len(method_names) - 1:
                 # Generate content of the method body with control flow if necessary
-                method_body = control_flow.generate_method(caller_method=method,
+                method_body = control_flow.generate_method_body(caller_method=method,
                                                             called_methods=[method_names[i+1]],
                                                             n_vars=config.n_vars,
                                                             n_loops=config.n_loops,
                                                             n_if=config.n_if)
             else:
-                method_body = control_flow.generate_method(caller_method=method,
+                method_body = control_flow.generate_method_body(caller_method=method,
                                                            called_methods=None,
                                                            n_vars=config.n_vars,
                                                            n_loops=config.n_loops,
@@ -129,7 +133,7 @@ class LanguageGenerator(ABC):
             comment = "\t" + comment.replace("\n", "\n\t")
             method_body = "\t" + method_body.replace("\n", "\n\t")
             
-            method_bodies.append(f"{comment}\n{method_body}")
+            method_bodies.append(f"{comment}\npublic void {method}() {{\n{method_body}\n\t}}")
             
         return method_bodies
             
@@ -444,9 +448,9 @@ class QuestionGenerator:
         return questions_with_distances_and_chains
 
     @staticmethod
-    def select_questions_by_distance(questions_with_distances: List[Tuple], distance: int, n: int) -> List[Tuple]:
+    def select_questions_by_distance(questions_with_distances: List[Tuple], distance: int, n: int, field: str="distance") -> List[Tuple]:
         """Select up to n questions with a specified distance"""
-        filtered = [q for q in questions_with_distances if q["distance"] == distance]
+        filtered = [q for q in questions_with_distances if q[field] == distance]
         return random.sample(filtered, min(n, len(filtered)))
             
         
@@ -472,6 +476,9 @@ class FileWriter:
     @staticmethod
     def write_questions_to_file(questions_with_distances: List[Tuple], filename: Path) -> None:
         """Writes the questions to a file, one per line."""
+        filename = Path(filename)
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        
         with open(filename, 'w') as f:
             for item in questions_with_distances:
                 to_write = [str(item["distance"]), item["question"]]
@@ -575,11 +582,11 @@ class ExperimentRunner:
         return [item for sublist in lst for item in sublist]
 
     @staticmethod
-    def count_distances(tuples_list: List[Tuple]) -> dict:
+    def count_distances(tuples_list: List[Tuple], field: str="distance") -> dict:
         """Count occurrences of each distance"""
         count_dict = defaultdict(int)
         for item in tuples_list:
-            count_dict[item["distance"]] += 1
+            count_dict[item[field]] += 1
         return count_dict
 
     def generate_single_linear_context(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
@@ -608,9 +615,9 @@ class ExperimentRunner:
                 
         # Generate questions for all chains
         all_questions = []
-        for chain_names in all_chains:
+        for chain in all_chains:
             questions = self.question_generator.generate_call_questions_with_distances_and_chains(
-                chain_names,
+                chain,
                 config.language
             )
             all_questions.extend(questions)
@@ -624,6 +631,65 @@ class ExperimentRunner:
         # print(f"Chains:\n\tExpected total: {n_chains}\n\tGround truth: {len(all_chains)}")
         # print(f"Questions:\n\tExpected total: {2 * n_questions * len(config.depths)}\n\tGround truth: {len(selection)}")
         # print(f"Distance distribution: {self.count_distances(selection)}")
+
+        # Write all files
+        directory.mkdir(parents=True, exist_ok=True)
+        
+        if config.n_if >= 2 or config.n_loops >= 2:
+            prompt = prompts.in_context_control_flow_2_linear_calls
+            # prompt = prompts.advanced_control_flow_2_linear_calls
+        elif config.n_if == 1 or config.n_loops == 1:
+            prompt = prompts.in_context_control_flow_1_linear_calls
+            # prompt = prompts.advanced_control_flow_1_linear_calls
+        else:
+            prompt = prompts.in_context_linear_calls
+            # prompt = prompts.advanced_linear_calls
+        
+        # Use language-specific file extension
+        class_filename = f"TheClass{lang_generator.get_file_extension()}"
+        self.file_writer.write_class_to_file(the_class, directory / class_filename)
+        self.file_writer.write_prompt_to_file(prompt, the_class, directory / "system.txt")
+        self.file_writer.write_questions_to_file(selection, directory / "reachability_questions.txt")
+        self.file_writer.write_chains_to_file(selection, directory / "chains.txt", config)
+        self.file_writer.write_methods_to_file(method_names, directory / "methods.txt")
+        
+    def generate_single_linear_context_v2(self, directory: Path, n_chains: int, chain_size: int, n_questions: int, 
+                                          config: LinearCallExperimentConfig) -> None:
+        """Generate a single context with specified parameters"""
+        # Get language-specific generator
+        lang_generator = LanguageFactory.get_generator(config.language)
+        
+        # Generate method names with appropriate naming style
+        method_names = self.method_generator.generate_unique_method_names(
+            config.context_size, 
+            lang_generator.get_method_name_style()
+        )
+        
+        # Subdivide the list of method names into chains of methods
+        all_chains = self.divide_list_into_chunks(method_names, chain_size)
+        
+        trees, all_chains = method_tree.generate_many_branches(all_chains, config.n_params, config.n_vars)
+        
+        # Generate questions for all chains
+        all_questions = []
+        for chain in all_chains:
+            questions = self.question_generator.generate_call_questions_with_distances_and_chains(
+                chain,
+                config.language
+            )
+            all_questions.extend(questions)
+                    
+        # Select questions for each depth
+        selection = []
+        for depth in config.depths:
+            selection.extend(self.question_generator.select_questions_by_distance(all_questions, depth, n_questions))
+            selection.extend(self.question_generator.select_questions_by_distance(all_questions, -depth, n_questions))
+        
+        # print(f"Chains:\n\tExpected total: {n_chains}\n\tGround truth: {len(all_chains)}")
+        # print(f"Questions:\n\tExpected total: {2 * n_questions * len(config.depths)}\n\tGround truth: {len(selection)}")
+        # print(f"Distance distribution: {self.count_distances(selection)}")
+
+        the_class = lang_generator.generate_class_from_multiple_trees(trees=trees, config=config)
 
         # Write all files
         directory.mkdir(parents=True, exist_ok=True)
@@ -776,6 +842,7 @@ class ExperimentRunner:
         # ! If write file stays here the context size will be inaccurate for tree calls
         # ! since context size can only be multiples of 15 for these depths
         # ! To have the updated version, it should be called after generating the experiment
+        # TODO: check if that's sorted out, normally it should be already
         if config.type == "linear":
             ret = self.generate_linear_experiment(config)
             config.write_file(os.path.join(config.name, "config.json"))
@@ -835,7 +902,7 @@ class ExperimentRunner:
             q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
             q_end = (config.n_questions - n_questions_left + n_chains_in_context) * len(config.depths) * 2
             
-            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_qs-{q_start}--{q_end}_{config.language}_linear"
+            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_params-{config.n_params}_qs-{q_start}--{q_end}_{config.language}_linear"
             
             # One chain account for one set of questions at most 
             # as the larger depth question often require a full chain
@@ -853,7 +920,8 @@ class ExperimentRunner:
             # chain_generator = lambda c: comments_generation.generate_chained_method_calls_with_comments(c, config.n_comment_lines, config.language)
             chain_generator = lambda c: LanguageGenerator.chain_generator(method_names=c, config=config)
             
-            self.generate_single_linear_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
+            # self.generate_single_linear_context(exp_dir, n_chains_in_context, chain_size, n_qs, chain_generator, config)
+            self.generate_single_linear_context_v2(exp_dir, n_chains_in_context, chain_size, n_qs, config)
             
             directories.append(exp_dir)
             n_questions_left -= n_chains_in_context
@@ -908,7 +976,7 @@ class ExperimentRunner:
         
         while n_questions_left > 0:
             depth_str = self._format_depths(config.depths)
-            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_qs-{context_counter}_{config.language}_tree"
+            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_params-{config.n_params}_qs-{context_counter}_{config.language}_tree"
             
             
             # n_questions_generated = self.generate_single_tree_context(exp_dir, n_trees, tree_depth, config, max(config.depths), n_questions_left)
@@ -934,13 +1002,13 @@ class ExperimentRunner:
         return "_".join(str(d) for d in depths)
 
     def generate_batch_experiments(self, context_ranges: List[int], n_comments: int,
-                                   n_vars: int, n_loops:int, n_if: int, language: str = "java",
-                                   experiment_type: str = "linear") -> None:
+                                   n_vars: int, n_loops:int, n_if: int, n_params: int,
+                                   language: str = "java", experiment_type: str = "linear") -> None:
         """Generate multiple experiments for different context sizes"""
         for context_size in context_ranges:
             if experiment_type == "linear":
                 config = LinearCallExperimentConfig(
-                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
+                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}_param-{n_params}",
                     context_size=context_size,
                     depths=list(range(1, 11)),
                     n_questions= 400,
@@ -949,13 +1017,14 @@ class ExperimentRunner:
                     n_vars=n_vars,
                     n_loops=n_loops,
                     n_if=n_if,
+                    n_params=n_params,
                     language=language,
                     type=experiment_type
                 )
             
             elif experiment_type == "tree":
                 config = TreeCallExperimentConfig(
-                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}",
+                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}_param-{n_params}",
                     context_size=context_size,
                     depths=list(range(1, 11)),
                     n_questions= 400,
@@ -964,6 +1033,7 @@ class ExperimentRunner:
                     n_vars=n_vars,
                     n_loops=n_loops,
                     n_if=n_if,
+                    n_params=n_params,
                     language=language,
                     type=experiment_type
                 )
@@ -987,52 +1057,80 @@ class ExperimentRunner:
 
     def generate_all_experiments(self, languages: List[str] = ["java"]) -> None:
         """Generate all predefined experiments for specified languages"""
-        experiment_configs = [
-            # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
-            # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
-            # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4),
-            ([50, 75, 100, 150, 200, 250, 300, 350], 7),
-            # ([50, 75, 100, 150, 200], 12),
-            # ([100], 24)
-        ]
+        # experiment_configs = [
+        #     # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0),
+        #     # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2),
+        #     # ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4),
+        #     ([50, 75, 100, 150, 200, 250, 300, 350], 7),
+        #     # ([50, 75, 100, 150, 200], 12),
+        #     # ([100], 24)
+        # ]
+        
+        # experiment_configs = [
+        #     # ([context], comments, vars, loops, if)
+        #     ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0, 0, 0, 0, 0),
+        #     ([50, 75, 100, 150, 200, 250, 300, 350, 400], 0, 1, 1, 1, 1),
+        #     ([50, 75, 100, 150, 200, 250], 0, 2, 2, 2, 2),
+            
+        #     ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2, 0, 0, 0, 0),
+        #     ([50, 75, 100, 150, 200, 250, 300, 350, 400], 2, 1, 1, 1, 1),
+        #     ([50, 75, 100, 150, 200, 250], 2, 2, 2, 2, 2),
+            
+        #     ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4, 0, 0, 0, 0),
+        #     ([50, 75, 100, 150, 200, 250, 300, 350], 4, 1, 1, 1, 1),
+        #     ([50, 75, 100, 150, 200], 4, 2, 2, 2, 2),
+            
+        #     ([50, 75, 100, 150, 200, 250, 300, 350, 400], 7, 0, 0, 0, 0),
+        #     ([50, 75, 100, 150, 200, 250, 300], 7, 1, 1, 1, 1),
+        #     ([50, 75, 100, 150, 200], 7, 2, 2, 2, 2),
+            
+        #     ([50, 75, 100, 150, 200], 12, 0, 0, 0, 0),
+        #     ([50, 75, 100, 150, 200], 12, 1, 1, 1, 1),
+        #     ([50, 75, 100, 150, 200], 12, 2, 2, 2, 2),
+            
+        #     ([50, 75, 100], 24, 0, 0, 0, 0),
+        #     ([50, 75, 100], 24, 1, 1, 1, 1),
+        #     ([50, 75, 100], 24, 2, 2, 2, 2),
+        # ]
         
         experiment_configs = [
-            # ([context], comments, vars, loops, if)
-            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0, 0, 0, 0),
-            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 0, 1, 1, 1),
-            ([50, 75, 100, 150, 200, 250], 0, 2, 2, 2),
+            # ([context], comments, vars, loops, if, params)
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 0, 0, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 0, 1, 1, 1, 1),
+            ([50, 75, 100, 150, 200, 250], 0, 2, 2, 2, 2),
             
-            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000], 2, 0, 0, 0, 0),
             ([50, 75, 100, 150, 200, 250, 300, 350, 400], 2, 1, 1, 1),
             ([50, 75, 100, 150, 200, 250], 2, 2, 2, 2),
             
-            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4, 0, 0, 0),
-            ([50, 75, 100, 150, 200, 250, 300, 350], 4, 1, 1, 1),
-            ([50, 75, 100, 150, 200], 4, 2, 2, 2),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500], 4, 0, 0, 0, 0),
+            ([50, 75, 100, 150, 200, 250, 300, 350], 4, 1, 1, 1, 1),
+            ([50, 75, 100, 150, 200], 4, 2, 2, 2, 2),
             
-            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 7, 0, 0, 0),
-            ([50, 75, 100, 150, 200, 250, 300], 7, 1, 1, 1),
-            ([50, 75, 100, 150, 200], 7, 2, 2, 2),
+            ([50, 75, 100, 150, 200, 250, 300, 350, 400], 7, 0, 0, 0, 0), # token count 95549/96092 for 400 ctx
+            ([50, 75, 100, 150, 200, 250, 300], 7, 1, 1, 1, 1),
+            ([50, 75, 100, 150, 200], 7, 2, 2, 2, 2),
             
-            ([50, 75, 100, 150, 200], 12, 0, 0, 0),
-            ([50, 75, 100, 150, 200], 12, 1, 1, 1),
-            ([50, 75, 100, 150, 200], 12, 2, 2, 2),
+            ([50, 75, 100, 150, 200], 12, 0, 0, 0, 0),
+            ([50, 75, 100, 150, 200], 12, 1, 1, 1, 1),
+            ([50, 75, 100, 150, 200], 12, 2, 2, 2, 2), # token count 99468/100178 for 200 ctx
             
-            ([50, 75, 100], 24, 0, 0, 0),
-            ([50, 75, 100], 24, 1, 1, 1),
-            ([50, 75, 100], 24, 2, 2, 2),
+            ([50, 75, 100], 24, 0, 0, 0, 0),
+            ([50, 75, 100], 24, 1, 1, 1, 1),
+            ([50, 75, 100], 24, 2, 2, 2, 2),
         ]
         
         for type in ["linear", "tree"]:
             print(f"\n=== Generating {type} experiments ===")
             for language in languages:
                 print(f"\n=== Generating experiments for {language.upper()} ===")
-                for context_ranges, n_comments, n_vars, n_loops, n_if in experiment_configs:
+                for context_ranges, n_comments, n_vars, n_loops, n_if, n_params in experiment_configs:
                     self.generate_batch_experiments(context_ranges=context_ranges,
                                                     n_comments=n_comments,
                                                     n_vars=n_vars,
                                                     n_loops=n_loops,
                                                     n_if=n_if,
+                                                    n_params=n_params,
                                                     language=language,
                                                     experiment_type=type)
 
