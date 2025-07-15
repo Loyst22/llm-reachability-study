@@ -1,4 +1,6 @@
+import copy
 from pathlib import Path
+import random
 import control_flow
 
 class Node:
@@ -17,12 +19,15 @@ class Node:
         var_types (list[str]): List of variable types used in the method. (params + local variables)
         all_variables (list[Variable]): List of variables defined/used in the method.
     """
-    def __init__(self, name: str, n_params: int = 0, n_vars: int = 0, parent=None, left=None, right=None):
+    def __init__(self, name: str, n_params: int=0, n_vars: int=0, path: list[str]=None, parent=None, left=None, right=None):
         self.name = name
         self.parent = parent
         self.left = left
         self.right = right
-        
+        if path is None:
+            path = []
+        self.path = path.copy()
+            
         # ! Be careful with building that at init, parents might get added later
         # ! atm there is no issue with that, but it might break in the future
         if parent is None:
@@ -49,7 +54,7 @@ class Node:
         else:
             self.return_type = return_type  # Return type of the method (if any)
         """
-        
+    
     def __str__(self):
         parent_name = self.parent.name if self.parent else "None"
         left_name = self.left.name if self.left else "None"
@@ -62,6 +67,7 @@ class Node:
             f"parent={parent_name}, "
             f"left={left_name}, "
             f"right={right_name}, "
+            f"path={self.path}, "
             f"param_types={param_types}, "
             f"variable_types={variable_types}),"
             f"variables={self.variables}"
@@ -129,7 +135,10 @@ def write_trees_to_files(trees: list, dir: str):
             with open(individual_path, 'r') as tree_f:
                 file.write(tree_f.read())
 
-def build_binary_tree(depth: int, method_names: list[str], parent: Node = None) -> tuple[Node, list[str]]:
+""" Tree generation functions """
+
+def build_binary_tree(depth: int, method_names: list[str], direction: str=None, parent: Node = None, n_params: int=0, n_vars: int=0
+                      ) -> Node:
     """Build a binary tree from a list of method names.
 
     Args:
@@ -143,18 +152,142 @@ def build_binary_tree(depth: int, method_names: list[str], parent: Node = None) 
     """
     if depth < 0 or not method_names:
         return None
+    
+    if parent: 
+        path = parent.path.copy()
+        path.append(direction)
+    else:
+        path = []
 
     # Pop the current method name
-    name = method_names.pop(0)
-    node = Node(name=name, parent=parent)
+    node = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, path=path, parent=parent)
 
     # Build left and right subtrees, consuming names in-place
-    node.left = build_binary_tree(depth - 1, method_names, node)
-    node.right = build_binary_tree(depth - 1, method_names, node)
+    node.left = build_binary_tree(depth - 1, method_names, "left", node, n_params, n_vars)
+    node.right = build_binary_tree(depth - 1, method_names, "right", node, n_params, n_vars)
 
     return node
 
-def build_unbalanced_binary_tree(max_distance: int, method_names: list) -> Node:
+def build_jellyfish_tree(k_depth: int, 
+                         k_depth_iter: int,
+                         max_distance: int,
+                         method_names: list,
+                         parent: Node = None,
+                         direction: str=None, 
+                         n_params: int=0,
+                         n_vars: int=0,
+                         shape: list=["left", "right"]
+                         ) -> Node:
+    """Build a jellyfish tree from a list of method names.
+
+    Args:
+        k_depth (int): Depth of the complete part of the tree
+        comb_depth (int): Depth of the comb parts of the graph
+        max_distance (int): The maximum distance for which we wish to ask question.
+        method_names (list): A list of method names to be used as node names in the tree
+        n_params (int, optional): Number of parameters per function. Defaults to 0.
+        n_vars (int, optional): Number of variables per function. Defaults to 0.
+        shape (list, optional): Describes the shape of the comb parts of the tree. Defaults to ["left", "right"].
+
+    Returns:
+        Node: The root of the binary tree
+    """
+    comb_depth = max_distance//2 + 2
+    
+    root = build_binary_tree(depth=k_depth, method_names=method_names, n_params=n_params, n_vars=n_vars)
+    
+    current_node = root
+    
+    # Iterate to find the left most node
+    while current_node.path.count("left") < k_depth and current_node.left is not None:
+        current_node = current_node.left
+    if current_node.path.count("left") == k_depth:
+        setattr(current_node, shape[0], build_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, current_node, shape))
+        setattr(current_node, shape[1], build_near_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, current_node, shape))
+        
+    current_node = root
+    
+    shape = shape[::-1]
+    
+    # Iterate so that we find the right most node
+    while current_node.path.count("right") < k_depth and current_node.right is not None:
+        current_node = current_node.right
+        
+    if current_node.path.count("right") == k_depth:
+        setattr(current_node, shape[0], build_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, current_node, shape))
+        setattr(current_node, shape[1], build_near_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, current_node, shape))
+    
+    return root
+
+    while False:
+        
+        # ! Solution here ? 
+        if k_depth_iter < 0 or not method_names:
+            return None
+
+        # Build the path list if it's not the root
+        if parent: 
+            path = parent.path.copy()
+            path.append(direction)
+        else:
+            path = []
+        # Create the new node
+        node = Node(method_names.pop(0), n_params, n_vars, path, parent)
+        
+        # If it's the extreme left/right bottom node of the complete part of the tree
+        # We insert the comb parts of the tree
+        if node.path.count("left") == k_depth-1 and node.path.count("right") == 0:
+            print(f"\nHere, left comb\n")
+            node.left = build_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, node, shape)
+            node.right = build_jellyfish_tree(k_depth, k_depth_iter-1, max_distance, method_names, node, "right", n_params, n_vars, shape)
+            return node
+        elif node.path.count("right") == k_depth-1 and node.path.count("left") == 0:
+            print(f"\nHere, right comb\n")
+            node.left = build_jellyfish_tree(k_depth, k_depth_iter-1, max_distance, method_names, node, "left", n_params, n_vars, shape)
+            node.right = build_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, node, shape[::-1])
+            return node
+        else:
+            # Build left and right subtrees for regular nodes
+            node.left = build_jellyfish_tree(k_depth, k_depth_iter-1, max_distance, method_names, node, "left", n_params, n_vars, shape)
+            node.right = build_jellyfish_tree(k_depth, k_depth_iter-1, max_distance, method_names, node, "right", n_params, n_vars, shape)
+
+            return node
+
+def build_double_comb(max_distance: int,
+                      method_names: list,
+                      n_params: int = 0,
+                      n_vars: int = 0,
+                      parent: Node = None,
+                      shape: list[str] = ["left", "right"]):
+    """Build an double comb binary tree from a list of method names.
+
+    Args:
+        max_distance (int): The maximum distance for which we wish to ask negative questions.
+        method_names (list): A list of method names to be used as node names in the tree.
+        n_params (int, optional): Number of parameters per function. Defaults to 0.
+        n_vars (int, optional): Number of variables per function. Defaults to 0.
+        parent (Node, optional): Parent node to link the double comb with
+        shape (list, optional): Describes the shape of the comb parts of the tree. Defaults to ["left", "right"].
+        
+    Returns:
+        Node: The root of the double comb binary tree
+    """
+    if not method_names:
+        return
+    
+    comb_depth = max_distance//2 + 2
+    
+    if parent is not None:
+        root = parent
+    else:
+        root = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars)
+    
+    setattr(root, shape[0], build_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, root, shape))
+    setattr(root, shape[1], build_near_comb_tree(comb_depth, max_distance, method_names, n_params, n_vars, root, shape))
+    
+    return root
+
+def build_unbalanced_binary_tree(max_distance: int, method_names: list, n_params: int=0, n_vars: int=0) -> Node:
     """Build an unbalanced binary tree from a list of method names.
 
     Args:
@@ -168,32 +301,41 @@ def build_unbalanced_binary_tree(max_distance: int, method_names: list) -> Node:
         return
     
     depth = max_distance
-    root = Node(method_names.pop(0))
+    root = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars)
     
-    build_left_branch(root, depth, method_names)
-    
-    # root.right = build_binary_tree(depth-1, method_names)
-    # root.right.parent = root
+    build_left_branch(root, depth, method_names, n_params=n_params, n_vars=n_vars)
     
     return root
 
 
-def build_unbalanced_binary_tree_v2(depth: int, max_distance: int, method_names: list) -> Node:
-    """Build an unbalanced binary tree from a list of method names.
+def build_comb_tree(depth: int, 
+                    max_distance: int, 
+                    method_names: list, 
+                    n_params: int=0, 
+                    n_vars: int=0, 
+                    parent: Node=None,
+                    shape: list=["left", "right"]
+                    ) -> Node:
+    """Build a comb binary tree from a list of method names.
 
     Args:
         depth (int): Depth of the tree
         max_distance (int): The maximum distance for which we wish to ask negative questions.
         method_names (list): A list of method names to be used as node names in the tree.
+        n_params (int, optional): Number of parameters per function. Defaults to 0.
+        n_vars (int, optional): Number of variables per function. Defaults to 0.
+        parent (Node, optional): Parent node to link the comb with
+        shape (list, optional): Describes the shape of the comb parts of the tree. Defaults to ["left", "right"].
         
     Returns:
-        Node: The root of the binary tree
+        Node: The root of the comb binary tree
     """
     if not method_names:
         return
-        
+    
+    
     current_index = 0
-    root = Node(method_names.pop(0))
+    root = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, parent=parent)
     current_index += 1
     current_node = root
     
@@ -203,46 +345,57 @@ def build_unbalanced_binary_tree_v2(depth: int, max_distance: int, method_names:
         if not method_names:
             return root
         
-        current_node.left = Node(method_names.pop(0), current_node)
+        new_node = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, parent=current_node)
+        setattr(current_node, shape[0], new_node) 
         current_index += 1
-        current_node = current_node.left
+        current_node = getattr(current_node, shape[0])
         depth_iter -= 1
-    if current_index < max_distance:
-        current_node = current_node.parent
-    while current_index - 1 < max_distance and current_node is not None:
+# if current_index < max_distance:
+    current_node = current_node.parent
+    while current_index - 4 < max_distance and current_node is not None:
         if not method_names:
             return root
         
-        current_node.right = Node(method_names.pop(0), current_node)
+        new_node = Node(name=method_names.pop(0), parent=current_node, n_params=n_params, n_vars=n_vars)
+        setattr(current_node, shape[1], new_node)
         current_index += 1
         current_node = current_node.parent
     
     if current_node is None:
         return root
     
-    # else:
-    #     current_node.right = build_binary_tree(depth, method_names[current_index:])
-    #     current_node.right.parent = current_node
-        
+    # new_node = build_near_comb_tree(depth, max_distance, method_names, n_params, n_vars, root, shape[::-1])
+    # setattr(root, shape[1], new_node)
     
     return root
 
-def build_unbalanced_binary_tree_v3(depth: int, max_distance: int, method_names: list) -> Node:
-    """Build an unbalanced binary tree from a list of method names.
+def build_near_comb_tree(depth: int, 
+                                    max_distance: int, 
+                                    method_names: list,
+                                    n_params: int=0, 
+                                    n_vars: int=0, 
+                                    parent: Node=None,
+                                    shape: list=["left", "right"]
+                                    ) -> Node:
+    """Build an near comb binary tree from a list of method names.
 
     Args:
-        depth (int): Depth of the tree
+        depth (int): Depth of the tree.
         max_distance (int): The maximum distance for which we wish to ask negative questions.
         method_names (list): A list of method names to be used as node names in the tree.
+        n_params (int): Number of parameters to include for each method node.
+        n_vars (int): Number of variables to include for each method node.
+        parent (Node, optional): Parent node to link the near comb with
+        shape (list, optional): Describes the shape of the comb parts of the tree. Defaults to ["left", "right"].
         
     Returns:
-        Node: The root of the binary tree
+        Node: The root of the near comb binary tree
     """
     if not method_names:
         return
     
     current_index = 0
-    root = Node(method_names.pop(0))
+    root = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, parent=parent)
     current_index += 1
     current_node = root
     
@@ -252,38 +405,112 @@ def build_unbalanced_binary_tree_v3(depth: int, max_distance: int, method_names:
         if not method_names:
             return root
     
-        current_node.left = Node(method_names.pop(0), current_node)
+        new_node = Node(name=method_names.pop(0), parent=current_node, n_params=n_params, n_vars=n_vars)
+        setattr(current_node, shape[0], new_node)
         current_index += 1
-        current_node = current_node.left
+        current_node = getattr(current_node, shape[0])
         depth_iter -= 1
-    if current_index < max_distance + 2:
-        current_node = current_node.parent
-        current_node = current_node.parent
+# if current_index < max_distance + 2:
+    current_node = current_node.parent
+    current_node = current_node.parent
         
-    while current_index < max_distance + 2 and current_node is not None:
+    while current_index - 3 < max_distance and current_node is not None:
         if not method_names:
             return root
         
-        current_node.right = Node(method_names.pop(0), current_node)
+        new_node = Node(name=method_names.pop(0), parent=current_node, n_params=n_params, n_vars=n_vars)
+        setattr(current_node, shape[1], new_node)
         current_index += 1
         current_node = current_node.parent
     
     if current_node is None:
         return root
-    # else:
-    #     root.right = build_binary_tree(depth, method_names[current_index:])
-    #     root.right.parent = root
-        
     
     return root
 
     
-def build_left_branch(root: Node, depth: int, method_names: list):
-    if depth < 0 or not method_names: 
+def build_left_branch(root: Node, depth: int, method_names: list, n_params: int=0, n_vars: int=0):
+    """
+    Build a branch (only using the left child of each node)
+    
+    Args:
+        root (Node): Root of the tree, the branch starts here.
+        depth (int): Depth of the tree.
+        method_names (list): A list of method names to be used as node names in the tree.
+        n_params (int): Number of parameters to include for each method node.
+        n_vars (int): Number of variables to include for each method node.
+    """
+    if (depth is not None and depth < 0) or not method_names: 
         return
 
-    root.left = Node(method_names.pop(0), root)
-    build_left_branch(root.left, depth-1, method_names)
+    root.left = Node(name=method_names.pop(0), parent=root, n_params=n_params, n_vars=n_vars)
+    build_left_branch(root.left, depth-1 if depth is not None else depth, method_names, n_params=n_params, n_vars=n_vars)
+
+def build_branch(method_names: list, n_params: int=0, n_vars: int=0):
+    """
+    Build a branch. Used for linear tree calls
+    
+    Args:
+        depth (int): Depth of the tree.
+        method_names (list): A list of method names to be used as node names in the tree.
+        n_params (int): Number of parameters to include for each method node.
+        n_vars (int): Number of variables to include for each method node.
+    """
+    root = Node(method_names.pop(0), n_params, n_vars)
+    build_left_branch(root, None, method_names, n_params, n_vars)
+    return root
+
+def generate_many_branches(chains: list[list[str]], n_params: int, n_vars: int):
+    ret_chains = copy.deepcopy(chains)
+    
+    trees = []
+    
+    for chain in chains:
+        trees.append(build_branch(chain, n_params, n_vars))
+    
+    return trees, ret_chains
+
+def build_diamond_tree(
+                        method_names: list, 
+                        max_distance: int,
+                        direction: str=None, 
+                        n_params: int=0, 
+                        n_vars: int=0, 
+                        parent: Node=None
+                      ) -> Node:
+    """
+    Build a tree shaped like a diamond (broad at half height)
+    
+    Args:
+        method_names (list): A list of method names to be used as node names in the tree.
+        max_distance (int): The maximum distance for which we wish to ask negative questions.
+        n_params (int): Number of parameters to include for each method node.
+        n_vars (int): Number of variables to include for each method node.
+        
+    Returns:
+        Node: The root of the tree
+    """
+    if not method_names:
+        return None
+        
+    if parent and (parent.path.count("left") >= 5 or parent.path.count("right") >= 5):
+        if (parent.path.count("left") < 5 or parent.path.count("right") < 5):
+            return None
+    if parent: 
+        path = parent.path.copy()
+        path.append(direction)
+    else:
+        path = []
+    node = Node(method_names.pop(0), n_params, n_vars, path, parent)
+    
+    node.left = build_diamond_tree(method_names, max_distance, "left", n_params, n_vars, node)
+    if parent and (parent.path.count("left") % 2 == 0 and parent.path.count("right") % 2 == 0):
+        return node
+    node.right = build_diamond_tree(method_names, max_distance, "right", n_params, n_vars, node)
+    
+    return node
+
+""" Tree traversal/search functions """
 
 def depth_first_traversal(node: Node):
     """Perform a depth-first traversal of the tree.
@@ -325,6 +552,7 @@ def depth_first_traversal(node: Node):
     # print(f"Depth-first traversal completed. Distance: {counter}. With backtracking: {counter_with_backtracking}. Height: {relative_height}")
     
     return method_names, counter, counter_with_backtracking, relative_height       
+
 
 def depth_first_search(node: Node, search_node: Node):
     """Perform a depth-first search of the tree.
@@ -390,6 +618,9 @@ def get_relative_height(node: Node, relative_parent: Node, height: int = 0) -> i
         return height
     return get_relative_height(node.parent, relative_parent, height+1)
 
+
+""" Chain finding functions """
+
 def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     """Find all method chains in a tree using depth-first traversal.
     This function traverses the tree in a depth-first manner and collects the names of the methods in the order they are visited.
@@ -443,7 +674,8 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     # The total number of chains is the sum of all chains from all levels. 
     
     return chains
-    
+
+
 def find_all_invalid_chains_depth_first(node: Node, root: Node = None, chains: list = None) -> list:
     """Find all invalid method chains in a tree using depth-first traversal.
     This function finds "invalid" chains, which are just the basis for "NO" questions to ask the LLMs.
@@ -512,6 +744,9 @@ def find_list_of_unreachable_methods(node: Node, root: Node) -> list:
         unreachable_methods.extend(find_list_of_unreachable_methods(node, root.right))
         
     return unreachable_methods
+
+
+
 
 # Build a binary tree with a depth of 3 and method names
 

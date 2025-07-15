@@ -136,11 +136,11 @@ def generate_many_call_trees_v2(dir: str, config: TreeCallExperimentConfig):
     cmpt = 0
     while method_names:
         if cmpt % 4 == 0:
-            root = method_tree.build_comb_graph(depth, max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
+            root = method_tree.build_comb_tree(depth, max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
             if root:
                 trees.append(root)
         elif cmpt % 4 == 1:
-            root = method_tree.build_near_comb_graph(depth, max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
+            root = method_tree.build_near_comb_tree(depth, max_chain_length, method_names, n_params=config.n_params, n_vars=config.n_vars)
             if root:
                 trees.append(root)
         elif cmpt % 4 == 2:
