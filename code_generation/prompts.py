@@ -419,7 +419,18 @@ Q:
 """
 }
 
-# Tree calls
+            # Tree calls
+
+"""
+    Tree used:
+foo
+    -> bar
+           -> qux
+           -> corge
+    -> baz
+           -> quux
+           -> grault
+"""
 
 in_context_tree_calls = {
     "start": """You are an assistant answering questions on source code, doing source code analysis. The questions will be about whether methods are calling each other, either directly or indirectly. To answer questions, think step-by-step by following method calls. Before answering with YES or NO, you must explain your reasoning step by step.
@@ -460,14 +471,17 @@ public class Example {
 }```
 Here are example questions:
     
-Q: does method `foo` call method `corge`, either directly or indirectly?
+Q: does method `foo` call method `quux`, either directly or indirectly?
 A:
 Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `qux`.
 3. `qux` does not call anything.
-3. `bar` calls `corge`.
-Therefore, `foo` calls `corge` indirectly. FINAL ANSWER: YES
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
     
 Q: does method `bar` call method `grault`, either directly or indirectly?
 A:
@@ -574,18 +588,26 @@ public class Example {
     }
 }```
 Here are example questions:
-Q: does method `foo` call method `baz`, either directly or indirectly?
+Q: does method `foo` call method `quux`, either directly or indirectly?
 A:
 Let's think step by step:
 1. `foo` calls `bar`.
-2. `bar` calls `baz`.
-Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
-Q: does method `bar` call method `foo`, either directly or indirectly?
+2. `bar` calls `qux`.
+3. `qux` does not call anything.
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
+
+Q: does method `bar` call method `grault`, either directly or indirectly?
 A:
 Let's think step by step:
-1. `bar` calls `baz`.
-2. `baz` does not call anything.
-Therefore, `bar` does not call `foo`. FINAL ANSWER: NO.
+1. `bar` calls `qux`.
+2. `qux` does not call anything.
+3. `bar` calls `corge`.
+4. `corge` does not call anything.
+Therefore, `bar` does not call `grault`. FINAL ANSWER: NO.
 
 Now we will have the real java code:
 ```
@@ -740,18 +762,26 @@ public class Example {
     }
 }```
 Here are example questions:
-Q: does method `foo` call method `baz`, either directly or indirectly?
+Q: does method `foo` call method `quux`, either directly or indirectly?
 A:
 Let's think step by step:
 1. `foo` calls `bar`.
-2. `bar` calls `baz`.
-Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
-Q: does method `bar` call method `foo`, either directly or indirectly?
+2. `bar` calls `qux`.
+3. `qux` does not call anything.
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
+
+Q: does method `bar` call method `grault`, either directly or indirectly?
 A:
 Let's think step by step:
-1. `bar` calls `baz`.
-2. `baz` does not call anything.
-Therefore, `bar` does not call `foo`. FINAL ANSWER: NO.
+1. `bar` calls `qux`.
+2. `qux` does not call anything.
+3. `bar` calls `corge`.
+4. `corge` does not call anything.
+Therefore, `bar` does not call `grault`. FINAL ANSWER: NO.
 
 Now we will have the real java code:
 ```
@@ -811,15 +841,18 @@ public class Example {
 }```
 Here are example questions:
     
-Q: does method `foo` call method `corge`, either directly or indirectly?
+Q: does method `foo` call method `quux`, either directly or indirectly?
 A:
 Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `qux`.
 3. `qux` does not call anything.
-3. `bar` calls `corge`.
-Therefore, `foo` calls `corge` indirectly. FINAL ANSWER: YES
-    
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `grault`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -933,18 +966,26 @@ public class Example {
     }
 }```
 Here are example questions:
-Q: does method `foo` call method `baz`, either directly or indirectly?
+Q: does method `foo` call method `quux`, either directly or indirectly?
 A:
 Let's think step by step:
 1. `foo` calls `bar`.
-2. `bar` calls `baz`.
-Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
-Q: does method `bar` call method `foo`, either directly or indirectly?
+2. `bar` calls `qux`.
+3. `qux` does not call anything.
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
+
+Q: does method `bar` call method `grault`, either directly or indirectly?
 A:
 Let's think step by step:
-1. `bar` calls `baz`.
-2. `baz` does not call anything.
-Therefore, `bar` does not call `foo`. FINAL ANSWER: NO.
+1. `bar` calls `qux`.
+2. `qux` does not call anything.
+3. `bar` calls `corge`.
+4. `corge` does not call anything.
+Therefore, `bar` does not call `grault`. FINAL ANSWER: NO.
 
 Now we will have the real java code:
 ```
@@ -1107,18 +1148,26 @@ public class Example {
     }
 }```
 Here are example questions:
-Q: does method `foo` call method `baz`, either directly or indirectly?
+Q: does method `foo` call method `quux`, either directly or indirectly?
 A:
 Let's think step by step:
 1. `foo` calls `bar`.
-2. `bar` calls `baz`.
-Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
-Q: does method `bar` call method `foo`, either directly or indirectly?
+2. `bar` calls `qux`.
+3. `qux` does not call anything.
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
+
+Q: does method `bar` call method `grault`, either directly or indirectly?
 A:
 Let's think step by step:
-1. `bar` calls `baz`.
-2. `baz` does not call anything.
-Therefore, `bar` does not call `foo`. FINAL ANSWER: NO.
+1. `bar` calls `qux`.
+2. `qux` does not call anything.
+3. `bar` calls `corge`.
+4. `corge` does not call anything.
+Therefore, `bar` does not call `grault`. FINAL ANSWER: NO.
 
 Now we will have the real java code:
 ```
