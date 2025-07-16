@@ -4,6 +4,7 @@ __pycache__
 scripts
 test_scripts
 notes
+run_experiment-unix.py
 
 # Ignore generated files
 exp_out
