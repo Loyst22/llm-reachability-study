@@ -197,17 +197,41 @@ def generate_many_call_trees_v3(dir: str, config: TreeCallExperimentConfig):
                     break # Stop the inner while
             k_depth -= 1 
             print("Generating Jellyfish tree")
-            root = method_tree.build_jellyfish_tree(k_depth, k_depth, max_chain_length, method_names, shape=shape)
+            root = method_tree.build_jellyfish_tree(k_depth, 
+                                                    k_depth, 
+                                                    max_chain_length, 
+                                                    method_names, 
+                                                    n_params=config.n_params, 
+                                                    n_vars=config.n_vars, 
+                                                    shape=shape)
+            
         elif len(method_names) >= size_of_double_comb:
             print("Generating Double-Comb tree")
-            root = method_tree.build_double_comb(max_chain_length, method_names, shape=shape)
+            root = method_tree.build_double_comb(max_chain_length, 
+                                                 method_names,
+                                                 n_params=config.n_params,
+                                                 n_vars=config.n_vars, 
+                                                 shape=shape)
+            
         elif len(method_names) >= size_of_comb:
             if random.random() > 0.5:
                 print("Generating Comb tree")
-                root = method_tree.build_comb_tree(comb_depth, max_chain_length, method_names, shape=shape)
+                root = method_tree.build_comb_tree(comb_depth, 
+                                                   max_chain_length, 
+                                                   method_names,
+                                                   n_params=config.n_params,
+                                                   n_vars=config.n_vars, 
+                                                   shape=shape)
+                
             else:
                 print("Generating Near-Comb tree")
-                root = method_tree.build_near_comb_tree(comb_depth, max_chain_length, method_names, shape=shape)
+                root = method_tree.build_near_comb_tree(comb_depth, 
+                                                        max_chain_length,
+                                                        method_names,
+                                                        n_params=config.n_params,
+                                                        n_vars=config.n_vars, 
+                                                        shape=shape)
+                
         else:
             remaining_size = len(method_names)
             k_depth = 0
@@ -217,9 +241,11 @@ def generate_many_call_trees_v3(dir: str, config: TreeCallExperimentConfig):
                 k_size = 2**(k_depth+1) - 1
             # k_depth -= 1
             print("Generating Binary tree")
-            root = method_tree.build_binary_tree(k_depth, method_names)
+            root = method_tree.build_binary_tree(k_depth, 
+                                                 method_names, 
+                                                 n_params=config.n_params, 
+                                                 n_vars=config.n_vars)
                         
-        
         if root:
             trees.append(root)
         shape = shape[::-1]
@@ -301,6 +327,7 @@ def generate_single_method_body(node: method_tree.Node, config: TreeCallExperime
     if len(next_methods) == 0:
         next_methods = None
     
+    print(node.all_variables)
     method_body = control_flow.generate_method_body(next_methods=next_methods,
                                                    vars=node.variables,
                                                    all_vars=node.all_variables,

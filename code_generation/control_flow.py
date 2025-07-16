@@ -1,3 +1,4 @@
+import copy
 from math import ceil
 import random
 import generate_chain as generate_chain
@@ -307,7 +308,7 @@ def choose_n_vars(n_vars: int, variables: list[Variable]) -> list[Variable]:
     if n_vars > len(variables):
         raise ValueError("n_vars cannot be greater than the number of available variables.")
     
-    return random.sample(variables, n_vars)
+    return [copy.deepcopy(var) for var in random.sample(variables, n_vars)]
 
 def choose_n_vars_from_types(var_types: list[str], variables: list[Variable]) -> list[Variable]:
     """Choose variables from a list based on a list of var_types.
@@ -337,6 +338,22 @@ def choose_n_vars_from_types(var_types: list[str], variables: list[Variable]) ->
             used_names.add(var.name)
 
     return chosen_vars
+
+def rename_vars(variables: list[Variable]):
+    used_names = set()
+    for var in variables:
+        used_names.add(var.name)
+    
+    for var in variables:
+        new_name = Variable.random_variable_name()
+        
+        while new_name in used_names:
+            new_name = Variable.random_variable_name()
+        
+        var.name = new_name
+        used_names.add(new_name)
+        
+    return
 
 """ Method body generation functions. """
 

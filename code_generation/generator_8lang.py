@@ -398,7 +398,7 @@ class QuestionGenerator:
     
     @staticmethod
     def generate_call_questions_with_distances_and_chains(method_names: List[str], 
-                                                        language: str = "java") -> List[Tuple]:
+                                                        language: str = "java") -> list[dict]:
         """Generate questions, distances, and chains for all pairs of methods"""
         questions_with_distances_and_chains = []
         num_methods = len(method_names)
@@ -1100,6 +1100,9 @@ class ExperimentRunner:
                     language=language,
                     type=experiment_type
                 )
+                
+            if n_if != 0 and n_loops != 0 and n_vars == 0:
+                config.n_vars = 1
             
             start_time = time.time()
             self.generate_experiment(config)

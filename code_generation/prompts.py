@@ -36,6 +36,7 @@ Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `baz`.
 Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `foo`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -98,6 +99,7 @@ Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `baz`.
 Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `foo`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -185,6 +187,7 @@ Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `baz`.
 Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `foo`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -235,6 +238,7 @@ Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `baz`.
 Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `foo`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -306,6 +310,7 @@ Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `baz`.
 Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `foo`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -402,6 +407,7 @@ Let's think step by step:
 1. `foo` calls `bar`.
 2. `bar` calls `baz`.
 Therefore, `foo` calls bar indirectly. FINAL ANSWER: YES
+
 Q: does method `bar` call method `foo`, either directly or indirectly?
 A:
 Let's think step by step:
@@ -430,6 +436,36 @@ foo
     -> baz
            -> quux
            -> grault
+"""
+
+"""
+    Questions asked (with metrics):
+    
+Q: does method `foo` call method `quux`, either directly or indirectly?
+A:
+Let's think step by step:
+1. `foo` calls `bar`.
+2. `bar` calls `qux`.
+3. `qux` does not call anything.
+4. `bar` calls `corge`.
+5. `corge` does not call anything.
+6. `foo` calls `baz`.
+7. `baz` calls `quux`.
+Therefore, `foo` calls `quux` indirectly. FINAL ANSWER: YES
+
+==> distance 5, distance with backtracking 8 (3 backtracking), depth 2
+
+
+Q: does method `bar` call method `grault`, either directly or indirectly?
+A:
+Let's think step by step:
+1. `bar` calls `qux`.
+2. `qux` does not call anything.
+3. `bar` calls `corge`.
+4. `corge` does not call anything.
+Therefore, `bar` does not call `grault`. FINAL ANSWER: NO.
+
+==> distance 2, distance with backtracking 3 (1 backtracking), depth 1
 """
 
 in_context_tree_calls = {

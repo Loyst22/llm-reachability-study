@@ -230,7 +230,7 @@ if __name__ == "__main__":
     
     if len(sys.argv) > 1:
         for directory in sys.argv[1:]:
-            run_experiments(directory, [coder3B, coder7B])
-            # run_experiment(directory, coder3B)
+            # run_experiments(directory, [coder3B, coder7B])
+            run_experiment(directory, coder3B)
     else:
         print("Usage: python run_experiment.py <directory1> [<directory2> ...]")

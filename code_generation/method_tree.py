@@ -31,9 +31,16 @@ class Node:
         # ! Be careful with building that at init, parents might get added later
         # ! atm there is no issue with that, but it might break in the future
         if parent is None:
-            self.params = control_flow.random_variables(n_params)
+            # We can't have parameters if it's the root
+            self.params = []
+            # But we have to have at least the same amount of variable as of parameters if the other methods have parameters
+            if n_vars < n_params:
+                n_vars = n_params
+                
+            # self.params = control_flow.random_variables(n_params)
         else:
             self.params = control_flow.choose_n_vars(n_params, parent.all_variables)
+            control_flow.rename_vars(self.params)
         
         # Get names of all param variables to avoid duplication
         param_names = {var.name for var in self.params}
