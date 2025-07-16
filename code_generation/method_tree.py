@@ -643,8 +643,6 @@ def depth_first_search(node: Node, search_node: Node) -> tuple[list[str], int, i
     
     relative_height = search_node.get_relative_height(node)
     
-    # distance_with_backtracking -= relative_height
-    
     # print(f"Depth-first traversal completed. Distance: {distance}. With backtracking: {distance_with_backtracking}. Height: {relative_height}")
     
     return method_names, distance, distance_with_backtracking, relative_height
@@ -673,7 +671,7 @@ def find_all_valid_chains_depth_first(node: Node, chains: list = None) -> list:
     if node.left is None and node.right is None:
         return []
         
-    def find_chains_starting_from(root_node: Node, current_node: Node = None):
+    def find_chains_starting_from(root_node: Node, current_node: Node = None) -> list[dict]:
         nonlocal chains
         if current_node is None or root_node is None:
             return
@@ -721,8 +719,6 @@ def find_all_invalid_chains_depth_first(node: Node, root: Node = None, chains: l
     Returns:
         list: A list of list of strings, each representing a chain of Java methods.
     """
-    
-    
     if chains is None:
         chains = []
     
@@ -762,6 +758,15 @@ def find_all_invalid_chains_depth_first(node: Node, root: Node = None, chains: l
     return chains
 
 def find_list_of_unreachable_methods(node: Node, root: Node) -> list:
+    """Build a list of methods that are unreachable from the Node "node".
+
+    Args:
+        node (Node): The node for which we are looking for unreachable methods.
+        root (Node): The root of the tree in which the node is.
+
+    Returns:
+        list: The list of names of unreachable methods.
+    """
     unreachable_methods = []
     
     # Traverse the tree from the root node to find methods that are not reachable from the current node
@@ -905,4 +910,47 @@ Another version of Jellyfish tree
 │            │      │            │     │            │                                                                                           │            │        │            │     │            │                                                                                                       
 │            │      │            │     │            │                                                                                           │            │        │            │     │            │                                                                                                       
 └────────────┘      └────────────┘     └────────────┘                                                                                           └────────────┘        └────────────┘     └────────────┘                                                                                                       
+"""
+
+"""
+Double Comb tree
+
+                                               ┌────────────┐
+                                               │            │                                                   
+                                               │            │
+                                               │            │
+                                               └──┬──────┬──┘
+                                                  │      │
+                                  ┌───────────────┘      └───────────────┐
+                                  │                                      │
+                                  ▼                                      ▼
+                           ┌────────────┐                         ┌────────────┐
+                           │            │                         │            │
+                           │            │                         │            │
+                           │            │                         │            │
+                           └──┬──────┬──┘                         └──┬──────┬──┘
+                        ┌─────┘      └──────┐                  ┌─────┘      └──────┐
+                        │                   │                  │                   │
+                        ▼                   ▼                  ▼                   ▼
+                  ┌────────────┐      ┌────────────┐     ┌────────────┐      ┌────────────┐
+                  │            │      │            │     │            │      │            │
+                  │            │      │            │     │            │      │            │
+                  │            │      │            │     │            │      │            │
+                  └──┬──────┬──┘      └────────────┘     └──┬──────┬──┘      └────────────┘
+               ┌─────┘      └──────┐                  ┌─────┘      └──────┐
+               │                   │                  │                   │
+               ▼                   ▼                  ▼                   ▼
+         ┌────────────┐      ┌────────────┐     ┌────────────┐      ┌────────────┐
+         │            │      │            │     │            │      │            │ 
+         │            │      │            │     │            │      │            │ 
+         │            │      │            │     │            │      │            │ 
+         └──┬──────┬──┘      └────────────┘     └──┬─────────┘      └────────────┘
+      ┌─────┘      └──────┐                  ┌─────┘
+      │                   │                  │
+      ▼                   ▼                  ▼
+┌────────────┐      ┌────────────┐     ┌────────────┐
+│            │      │            │     │            │
+│            │      │            │     │            │
+│            │      │            │     │            │
+└────────────┘      └────────────┘     └────────────┘
 """
