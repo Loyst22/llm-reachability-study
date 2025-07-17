@@ -6,7 +6,7 @@ import control_flow
 class Node:
     """
     A class representing a node in a binary tree.
-    Each node is actually respresenting a function.
+    Each node actually represents a function.
     
     Attributes:
         name (str): Name of the function/method.

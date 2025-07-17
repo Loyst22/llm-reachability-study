@@ -222,11 +222,11 @@ def run_experiments(directory, models_with_names):
 
 if __name__ == "__main__":
     
-    # model_with_name = ["Mistral-7B-Instruct-v0.3.IQ1_S.gguf", "Mistral-7B"]
+    # mistral7B = ["Mistral-7B-Instruct-v0.3.IQ1_S.gguf", "Mistral-7B"]
     coder7B = ["qwen2.5-coder-7b-instruct-q4_k_m.gguf", "Coder-7B"]
     coder3B = ["qwen2.5-coder-3b-instruct-q4_k_m.gguf", "Coder-3B"]
-    # model_with_name = ["qwen2.5-coder-1.5b-instruct-q4_k_m.gguf", "Coder-1.5B"]
-    # model_with_name = ["qwen2.5-Coder-0.5B-Instruct-Q4_K_L", "Coder-0.5B"]
+    # coder1_5B = ["qwen2.5-coder-1.5b-instruct-q4_k_m.gguf", "Coder-1.5B"]
+    # coder0_5B = ["qwen2.5-Coder-0.5B-Instruct-Q4_K_L", "Coder-0.5B"]
     
     if len(sys.argv) > 1:
         for directory in sys.argv[1:]:

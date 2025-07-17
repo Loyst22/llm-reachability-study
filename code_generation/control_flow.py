@@ -7,6 +7,14 @@ supported_types = ["int", "long", "boolean", "double"]
 
 # Simple data structure to hold variable information
 class Variable:
+    """
+    A class representing a variable.
+    
+    Attributes:
+        name (str): Name of the variable.
+        var_type (str): Type of the variable.
+        value (int | float | bool): Value of the variable.
+    """
     def __init__(self, name, var_type, value):
         self.name = name
         self.var_type = var_type
@@ -41,7 +49,7 @@ def is_var_in_list(var: Variable, list: list) -> bool:
     return any(v.name == var.name for v in list)
 
 def random_variable(var_type: str = None) -> Variable:
-    """Generate a random variable with a type and value."""
+    """Generate a random variable for a given type."""
     var_name = Variable.random_variable_name()
     if var_type is None or var_type not in supported_types:
         var_type = random.choice(supported_types)
@@ -57,10 +65,18 @@ def random_variable(var_type: str = None) -> Variable:
 
 
 def random_true_condition(variables: list, complexity: int = 0) -> str:
-    """Generate a simple condition that always evaluates to True using declared variables."""
-    # Choose a random variable
+    """Generate a simple condition that always evaluates to True using declared variables.
+    
+    Args: 
+        variables (list): list of variables that can be used in the condition
+        complexity (int, optional): complexity of the condition (see examples below). Defaults to 0
+    """
+    # Choose a random variable from the list
     var = random.choice(variables)
     
+    #   Examples: 
+    # (message >= 2 && min >= 7) || (buffer <= 2 || dict <= 2) 
+    # (result >= 13.0 || path == false) || (length <= 7 && y >= 5)
     if complexity == 3:
         rand = random.random()
         if rand < 1/4:
@@ -72,6 +88,9 @@ def random_true_condition(variables: list, complexity: int = 0) -> str:
         else:
             return "(" + random_false_condition(variables, 1) + ") || (" + random_true_condition(variables, 1) + ")"
     
+    #   Examples: 
+    # (config == true && x != true) || path >= 3.13
+    # (config >= 12 || data <= 4.95) && response != true
     if complexity == 2:
         rand = random.random()
         if rand < 1/8:
@@ -92,7 +111,10 @@ def random_true_condition(variables: list, complexity: int = 0) -> str:
             return random_false_condition(variables, 0) + " || (" + random_true_condition(variables, 1) + ")"
             
             
-    
+    #   Examples: 
+    # y <= 5 || output <= 4.54 
+    # length <= 0 || buffer >= 5 
+    # z >= 5.77 || array <= -1
     if complexity == 1:
         rand = random.random()
         if rand < 1/4:
@@ -106,6 +128,10 @@ def random_true_condition(variables: list, complexity: int = 0) -> str:
         
     
     # Generate conditions based on variable type, ensuring they are always true
+    #   Examples: 
+    # y != true
+    # buffer >= 4.86
+    # buffer <= 6
     if complexity == 0:
         match var.var_type:
             case "int" | "long":
@@ -135,10 +161,18 @@ def random_true_condition(variables: list, complexity: int = 0) -> str:
             
 
 def random_false_condition(variables: list, complexity: int = 0) -> str:
-    """Generate a simple condition that always evaluates to False using declared variables."""
-    # Choose a random variable
+    """Generate a simple condition that always evaluates to False using declared variables.
+    
+    Args: 
+        variables (list): list of variables that can be used in the condition
+        complexity (int, optional): complexity of the condition (see examples below). Defaults to 0
+    """
+    # Choose a random variable from the list
     var = random.choice(variables)
     
+    #   Examples:
+    # (user <= 0 && flag >= 5) && (temp == true || status == false)
+    # (option <= 8 || item <= 1) && (height >= 9 && list >= 5)
     if complexity == 3:
         rand = random.random()
         if rand < 1/4:
@@ -150,6 +184,9 @@ def random_false_condition(variables: list, complexity: int = 0) -> str:
         else:
             return "(" + random_false_condition(variables, 1) + ") || (" + random_false_condition(variables, 1) + ")"
     
+    #   Examples:
+    # (name >= 4.76 || text >= 9) && config == false
+    # min <= 6.05 && (config >= 10 && path == true)
     if complexity == 2:
         rand = random.random()
         if rand < 1/8:
@@ -169,6 +206,10 @@ def random_false_condition(variables: list, complexity: int = 0) -> str:
         else:
             return random_false_condition(variables, 0) + " || (" + random_false_condition(variables, 1) + ")"
     
+    #   Examples:
+    # token <= 3 && key >= 6.5
+    # index == false && config <= 4
+    # input >= 13 || value <= -0.47
     if complexity == 1:
         rand = random.random()
         if rand < 1/4:
@@ -180,6 +221,10 @@ def random_false_condition(variables: list, complexity: int = 0) -> str:
         else:
             return random_false_condition(variables, 0) + " || " + random_false_condition(variables, 0)
     
+    #   Examples:
+    # text >= 7.12
+    # cpt >= 7
+    # y != true
     if complexity == 0:
         match var.var_type:
             case "int" | "long":
@@ -230,12 +275,21 @@ def random_false_if(variables: list, useless_method: str = None) -> str:
 def method_call(called_method: str) -> str:
     """Generate the next method call using the given method name."""
     if called_method is None:
-        return f"\t// End of chain"
+        # return f"\t// End of chain"
+        pass
     else:
         return f"\t{called_method}();"
 
 def random_loop(next_method: str = None, nb_while: int = 0) -> tuple[str, str]:
-    """Generate a random for or while loop."""
+    """Generate a random for or while loop.
+    
+    Args: 
+        next_method (str, optional): actual method call to include in the loop. Contains the param string. Defaults to None
+        nb_while (int, optional): used to keep track of the amount of while generated to avoid redeclarations. Defaults to 0
+
+    Returns:
+        tuple[str, str]: the actual loop as a string, and the type of loop (either for or while)
+    """
     loop_type = random.choice(["for", "while"])
     if loop_type == "for":
         if next_method is None:
@@ -257,14 +311,14 @@ def random_loop(next_method: str = None, nb_while: int = 0) -> tuple[str, str]:
                 # return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t{method_call(next_method)}\n\t\tcounter++;\n\t}}", "while"                
                 return f"\tcounter = 0;\n\twhile (counter < {random.randint(1, 5)}) {{\n\t\t{next_method}\n\t\tcounter++;\n\t}}", "while"                
             
-def random_param_types(n_params: int = 1) -> list:
+def random_param_types(n_params: int = 0) -> list:
     """Generate a list of random parameter types for a method.
     
     Args:
-        n_params (int): number of parameters to generate
+        n_params (int, optional): number of parameters to generate. Defaults to 0
     
     Returns:
-        list: list of parameter types as strings    
+        list: list of parameter types as strings
     """
     param_types = []
     
@@ -277,10 +331,10 @@ def random_variables(n_vars: int = 1) -> list[Variable]:
     """Generate a list of random variables.
     
     Args:
-        n_vars (int): number of variables to generate
+        n_vars (int): Number of variables to generate. Defaults to 1
         
     Returns:
-        list[Variable]: list of Variable objects with random names, types and values
+        list[Variable]: List of Variable objects with random names, types and values
     """
     variables = []
     
@@ -367,8 +421,9 @@ def generate_method_body(
     """Generate a method body with simple control flow, declarations, and method calls.
     
     Args: 
-        next_methods (list): list of names of methods being called
-        n_vars (int): number of variables to declare
+        next_methods (list[str]): list of method calls including the param string
+        vars (list[Variable]): list of variables declared inside the method body
+        all_vars (list[Variable]): list of all variables used in the method (parameters AND body)
         n_loops (int): number of loops to include
         n_if (int): number of if statements to include
         
@@ -479,7 +534,8 @@ def generate_method_body(
     # If it's the end of chain we inform the LLM
     # ? is it actually necessary ?
     if end_of_chain:
-        body.append(f"\t// End of chain")
+        # body.append(f"\t// End of chain")
+        pass
     
     return "\n".join(body)
 

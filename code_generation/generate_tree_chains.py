@@ -327,7 +327,6 @@ def generate_single_method_body(node: method_tree.Node, config: TreeCallExperime
     if len(next_methods) == 0:
         next_methods = None
     
-    print(node.all_variables)
     method_body = control_flow.generate_method_body(next_methods=next_methods,
                                                    vars=node.variables,
                                                    all_vars=node.all_variables,
