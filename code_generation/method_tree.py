@@ -15,19 +15,34 @@ class Node:
         right (Node): Right child node.
         params (list[Variable]): List of parameters for the method.
         variables (list[Variable]): List of variables defined in the body of the method.
-        return_type (str): Return type of the method.
-        var_types (list[str]): List of variable types used in the method. (params + local variables)
         all_variables (list[Variable]): List of variables defined/used in the method.
+        var_types (list[str]): List of variable types used in the method. (params + local variables)
+        return_variable (Variable): Variable to return at the end of the method.
+        return_type (str): Return type of the method.
     """
-    def __init__(self, name: str, n_params: int=0, n_vars: int=0, path: list[str]=None, parent=None, left=None, right=None):
+    def __init__(self, 
+                 name: str,
+                 n_params: int=0, 
+                 n_vars: int=0, 
+                 return_value: bool=True, # ! TO CHANGE 
+                 path: list[str]=None, 
+                 parent=None, 
+                 left=None, 
+                 right=None):
+        # Name
         self.name = name
+        
+        # Links
         self.parent = parent
         self.left = left
         self.right = right
+        
+        # Path (very optional)
         if path is None:
             path = []
         self.path = path.copy()
             
+        # Params
         # ! Be careful with building that at init, parents might get added later
         # ! atm there is no issue with that, but it might break in the future
         if parent is None:
@@ -44,6 +59,8 @@ class Node:
         
         # Get names of all param variables to avoid duplication
         param_names = {var.name for var in self.params}
+        
+        # Variables
         self.variables = []
         
         while len(self.variables) < n_vars:
@@ -51,23 +68,23 @@ class Node:
             self.variables.extend([var for var in additional_vars if var.name not in param_names and var.name not in {v.name for v in self.variables}])
         
         self.all_variables = self.variables + self.params # Add parameters to the list of variables
+        self.var_types = [var.var_type for var in self.all_variables]
         
-        self.var_types = [var.var_type for var in self.variables]
-        
-        # Unused atm
-        """ 
-        if return_type is None:
-            self.return_type = "void"    
+        # Return
+        tmp_return = control_flow.choose_n_vars(1, self.all_variables)
+        if tmp_return and return_value:
+            self.return_variable = tmp_return[0]
+            self.return_type = self.return_variable.var_type
         else:
-            self.return_type = return_type  # Return type of the method (if any)
-        """
-    
+            self.return_variable = None
+            self.return_type = "void"
+        
+            
     def __str__(self):
         parent_name = self.parent.name if self.parent else "None"
         left_name = self.left.name if self.left else "None"
         right_name = self.right.name if self.right else "None"
         param_types = [var.var_type for var in self.params]
-        variable_types = [var.var_type for var in self.variables]
 
         return (
             f"Node(name={self.name}, "
@@ -75,9 +92,11 @@ class Node:
             f"left={left_name}, "
             f"right={right_name}, "
             f"path={self.path}, "
+            f"variable_types={self.var_types},"
             f"param_types={param_types}, "
-            f"variable_types={variable_types}),"
-            f"variables={self.variables}"
+            f"variables={self.variables},"
+            f"return_type={self.return_type},"
+            f"return_variable={self.return_variable})"
         )
 
     def print_tree(self, indent: str = ""):
@@ -364,7 +383,7 @@ def build_comb_tree(depth: int,
         if not method_names:
             return root
         
-        new_node = Node(name=method_names.pop(0), parent=current_node, n_params=n_params, n_vars=n_vars)
+        new_node = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, parent=current_node)
         setattr(current_node, shape[1], new_node)
         current_index += 1
         current_node = current_node.parent
@@ -413,7 +432,7 @@ def build_near_comb_tree(depth: int,
         if not method_names:
             return root
     
-        new_node = Node(name=method_names.pop(0), parent=current_node, n_params=n_params, n_vars=n_vars)
+        new_node = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, parent=current_node)
         setattr(current_node, shape[0], new_node)
         current_index += 1
         current_node = getattr(current_node, shape[0])
@@ -426,7 +445,7 @@ def build_near_comb_tree(depth: int,
         if not method_names:
             return root
         
-        new_node = Node(name=method_names.pop(0), parent=current_node, n_params=n_params, n_vars=n_vars)
+        new_node = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, parent=current_node)
         setattr(current_node, shape[1], new_node)
         current_index += 1
         current_node = current_node.parent
@@ -488,7 +507,7 @@ def build_branch(method_names: list, n_params: int=0, n_vars: int=0) -> Node:
     Returns:
         Node: The root of the branch
     """
-    root = Node(method_names.pop(0), n_params, n_vars)
+    root = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars)
     build_left_branch(root, None, method_names, n_params, n_vars)
     return root
 
@@ -543,7 +562,7 @@ def build_diamond_tree(method_names: list,
         path.append(direction)
     else:
         path = []
-    node = Node(method_names.pop(0), n_params, n_vars, path, parent)
+    node = Node(name=method_names.pop(0), n_params=n_params, n_vars=n_vars, path=path, parent=parent)
     
     node.left = build_diamond_tree(method_names, max_distance, "left", n_params, n_vars, node)
     if parent and (parent.path.count("left") % 2 == 0 and parent.path.count("right") % 2 == 0):
@@ -793,17 +812,17 @@ def find_list_of_unreachable_methods(node: Node, root: Node) -> list:
 
 # Build a binary tree with a depth of 3 and method names
 
-"""
-method_names = [
-"foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply",
-"waldo", "fred", "plugh", "xyzzy", "thud", "zedd", "last"
-]
-tree = build_binary_tree(3, method_names)
-tree.print_tree()
+if __name__ == '__main__':
+    method_names = [
+    "foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply",
+    "waldo", "fred", "plugh", "xyzzy", "thud", "zedd", "last"
+    ]
+    tree = build_binary_tree(3, method_names)
+    tree.print_tree()
 
 
-print(depth_first_search(tree, tree.right.right.right))
-"""
+    print(depth_first_search(tree, tree.right.right.right))
+
 
 """
 Jellyfish tree                                                                                                                                                                                                                                                                                               

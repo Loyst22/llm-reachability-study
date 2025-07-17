@@ -415,6 +415,7 @@ def generate_method_body(
     next_methods: list[str] = [],
     vars: list[Variable] = [], 
     all_vars: list[Variable] = [],
+    return_var: Variable = None,
     n_loops: int = 0, 
     n_if: int = 0
     ) -> str:
@@ -424,6 +425,7 @@ def generate_method_body(
         next_methods (list[str]): list of method calls including the param string
         vars (list[Variable]): list of variables declared inside the method body
         all_vars (list[Variable]): list of all variables used in the method (parameters AND body)
+        return_var (Variable): variable to return
         n_loops (int): number of loops to include
         n_if (int): number of if statements to include
         
@@ -536,6 +538,10 @@ def generate_method_body(
     if end_of_chain:
         # body.append(f"\t// End of chain")
         pass
+    
+    # Return a variable if necessary
+    if return_var:
+        body.append(f"\treturn {return_var.name};") 
     
     return "\n".join(body)
 

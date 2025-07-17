@@ -303,10 +303,10 @@ def generate_single_method_body(node: method_tree.Node, config: TreeCallExperime
     param_string = ", ".join([f"{var.var_type} {var.name}" for var in (node.params or [])])
     if config is None: 
         if node.left is None and node.right is None:
-            method_body = f"\tpublic void {node.name}({param_string}) {{\n\t\t// End of chain\n\t}}"
+            method_body = f"\t\t"
         else:
-            method_body = f"\tpublic void {node.name}({param_string}) {{\n\t\t{node.left.name}();\n\t\t{node.right.name}();\n\t}}"
-        return f"\tpublic void {node.name}() {{\n{method_body}\n\t}}"
+            method_body = f"\t\t{node.left.name}();\n\t\t{node.right.name}();"
+        return f"\tpublic void {node.name}({param_string}) {{\n{method_body}\n\t}}"
 
     if config.language.lower() != "java":
         raise ValueError("Tree call experiments only supports Java language")
@@ -315,14 +315,42 @@ def generate_single_method_body(node: method_tree.Node, config: TreeCallExperime
     
     next_methods = []
     
+    # For each call, choose variables to use for the arguments of the call and retrieve return value
     if node.left is not None:
         var_types = [var.var_type for var in node.left.params or []]
         call_params = control_flow.choose_n_vars_from_types(var_types, node.all_variables)
-        next_methods.append(f"{node.left.name}({', '.join([var.name for var in call_params])});")
+        call = f"{node.left.name}({', '.join([var.name for var in call_params])});"
+        if not node.left.return_variable:
+            next_methods.append(call)
+        else:
+            var_name = control_flow.Variable.random_variable_name()
+            while var_name in [var.name for var in node.all_variables]:
+                var_name = control_flow.Variable.random_variable_name()
+            next_methods.append(f"{node.left.return_type} {var_name} = {call}")
+            call_variable = control_flow.Variable(var_name, node.left.return_type, node.left.return_variable.value)
+            # ! Big issue here: call var is redeclared cause added in variables too early
+            # node.variables.append(call_variable) # Will avoid wrong declarations
+            # ! Another issue is scope: since calls are in ifs and loops they are not usable outside this scope
+            # node.all_variables.append(call_variable)
+            # ? By commenting these two lines, there are no issues but the return value is kept unused...
+            
     if node.right is not None:
         var_types = [var.var_type for var in node.right.params or []]
         call_params = control_flow.choose_n_vars_from_types(var_types, node.all_variables)
-        next_methods.append(f"{node.right.name}({', '.join([var.name for var in call_params])});")
+        call = f"{node.right.name}({', '.join([var.name for var in call_params])});"
+        if not node.right.return_variable:
+            next_methods.append(call)
+        else:
+            var_name = control_flow.Variable.random_variable_name()
+            while var_name in [var.name for var in node.all_variables]:
+                var_name = control_flow.Variable.random_variable_name()
+            next_methods.append(f"{node.right.return_type} {var_name} = {call}")
+            call_variable = control_flow.Variable(var_name, node.right.return_type, node.right.return_variable.value)
+            # ! Big issue here: call var is redeclared cause added in variables too early
+            # node.variables.append(call_variable) # Will avoid wrong declarations
+            # ! Another issue is scope: since calls are in ifs and loops they are not usable outside this scope
+            # node.all_variables.append(call_variable)
+            # ? By commenting these two lines, there are no issues but the return value is kept unused...
     
     if len(next_methods) == 0:
         next_methods = None
@@ -330,12 +358,13 @@ def generate_single_method_body(node: method_tree.Node, config: TreeCallExperime
     method_body = control_flow.generate_method_body(next_methods=next_methods,
                                                    vars=node.variables,
                                                    all_vars=node.all_variables,
+                                                   return_var=node.return_variable,
                                                    n_loops=config.n_loops,
                                                    n_if=config.n_if)
 
     comment = "\t" + comment.replace("\n", "\n\t")
     method_body = "\t" + method_body.replace("\n", "\n\t")
-    return f"{comment}\n\tpublic void {node.name}({param_string}) {{\n{method_body}\n\t}}"
+    return f"{comment}\n\tpublic {node.return_type} {node.name}({param_string}) {{\n{method_body}\n\t}}"
 
 
 def generate_class_from_multiple_trees(directory:str, class_name:str, trees:list, method_names:list, selection:list):
