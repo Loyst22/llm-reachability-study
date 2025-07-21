@@ -536,7 +536,7 @@ def generate_method_body(
     # If it's the end of chain we inform the LLM
     # ? is it actually necessary ?
     if end_of_chain:
-        # body.append(f"\t// End of chain")
+        body.append(f"\t// End of chain")
         pass
     
     # Return a variable if necessary
@@ -622,10 +622,10 @@ def generate_full_class(nb_methods: int=15, n_loops: int=None, n_if: int=None, n
 # generate_full_class()
 
 if __name__ == '__main__':
-    a = random_variable("int")
-    b = random_variable("int")
-    c = random_variable("int")
-    d = random_variable("int")
+    a = random_variable()
+    b = random_variable()
+    c = random_variable()
+    d = random_variable()
     
     
     print("First variable:", a)

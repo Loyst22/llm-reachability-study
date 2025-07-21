@@ -859,7 +859,6 @@ class ExperimentRunner:
         
         for depth in range(max_chain_length + 1):
             selection.extend(QuestionGenerator.select_questions_by_distance(valid_questions, depth, n_questions))
-            # TODO : see if we can manage to get negative questions for all distances
             selection.extend(QuestionGenerator.select_questions_by_distance(invalid_questions, -depth, n_questions))
         
         distance_dict = self.count_distances(selection)
