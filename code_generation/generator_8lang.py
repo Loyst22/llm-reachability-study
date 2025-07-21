@@ -1104,11 +1104,11 @@ class ExperimentRunner:
             if n_if != 0 and n_loops != 0 and n_vars == 0:
                 config.n_vars = 1
             
-            start_time = time.time()
+            # start_time = time.time()
             self.generate_experiment(config)
-            end_time = time.time()
+            # end_time = time.time()
             
-            print(f"Experiment {config.name} generated in {end_time - start_time:.2f} seconds")
+            # print(f"Experiment {config.name} generated in {end_time - start_time:.2f} seconds")
             
             # Commented for debugging purposes
             """

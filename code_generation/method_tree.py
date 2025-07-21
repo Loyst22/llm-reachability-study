@@ -24,7 +24,7 @@ class Node:
                  name: str,
                  n_params: int=0, 
                  n_vars: int=0, 
-                 return_value: bool=True, # ! TO CHANGE 
+                 return_value: bool=False, # ! TO CHANGE back to False if set to True 
                  path: list[str]=None, 
                  parent=None, 
                  left=None, 

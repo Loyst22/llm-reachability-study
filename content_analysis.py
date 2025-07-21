@@ -1230,8 +1230,9 @@ if __name__ == "__main__":
     # models = [model]
     # models = ["coder-14b", "coder-32b", "Coder-7B", "Coder-1.5B", "Llama-3.1"]
     # models = ["Mistral-Small"]
-    models = ["Coder-7B", "Coder-3B"]
-    
+    # models = ["Coder-7B", "Coder-3B"]
+    models = ["output-Mistral-Small-3.1-24B-Instruct-2503-Q6_K"]
+        
     print("Analysing experiments for following directories:", experiments)
     print("And models:", models)
     analyze_experiments(experiments, models)

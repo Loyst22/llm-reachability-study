@@ -9,6 +9,7 @@ run_experiment-unix.py
 # Ignore generated files
 exp_out
 experiments
+experiments_cflow_lin
 xps
 small-ext
 smallish-ext
