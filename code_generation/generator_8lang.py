@@ -960,14 +960,14 @@ class ExperimentRunner:
         while n_questions_left > 0:
             # Name the experiment sub-directory:
             depth_str = self._format_depths(config.depths)
-            q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
-            q_end = (config.n_questions - n_questions_left + n_chains_in_context) * len(config.depths) * 2
-            
-            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_params-{config.n_params}_qs-{q_start}--{q_end}_{config.language}_linear"
             
             # One chain account for one set of questions at most 
             # as the larger depth question often require a full chain
             n_qs = min(n_chains_in_context, n_questions_left)
+            q_start = (config.n_questions - n_questions_left) * len(config.depths) * 2
+            q_end = (config.n_questions - n_questions_left + n_qs) * len(config.depths) * 2
+            
+            exp_dir = base_dir / f"ctx-{config.context_size}_depths-{depth_str}_com-{config.n_comment_lines}_var-{config.n_vars}_loop-{config.n_loops}_if-{config.n_if}_params-{config.n_params}_qs-{q_start}--{q_end}_{config.language}_linear"
             
             print(f"\nGenerating {config.language} context of size {config.context_size} for {2*n_qs*len(config.depths)} questions")
             
@@ -1070,7 +1070,7 @@ class ExperimentRunner:
         for context_size in context_ranges:
             if experiment_type == "linear":
                 config = LinearCallExperimentConfig(
-                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}_param-{n_params}",
+                    name=f"experiments/{language}/{experiment_type}/context-{context_size}_comment-{n_comments}_var-{n_vars}_loop-{n_loops}_if-{n_if}_param-{n_params}_{language}_{experiment_type}",
                     context_size=context_size,
                     depths=list(range(1, 11)),
                     n_questions= 400,

@@ -10,6 +10,8 @@ run_experiment-unix.py
 exp_out
 experiments
 experiments_cflow_lin
+results-cflow-lin
+results-nocflow-lin
 xps
 small-ext
 smallish-ext
