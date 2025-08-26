@@ -389,7 +389,7 @@ def write_files(exp_dir, output_dir, write_dir, batch_infos, model_name, hierarc
     write_base_dirs = []
     write_base_dirs_code = []
     for batch in batch_infos:
-        batch_string = f"ctx-{batch['context']}_com-{batch['comments']}_var-{batch['var']}_loop-{batch['loop']}_if-{batch['if']}_{batch['language']}"
+        batch_string = f"ctx-{batch['context']}_com-{batch['comments']}_var-{batch['var']}_loop-{batch['loop']}_if-{batch['if']}_{batch['language']}_{batch['structure']}"
         write_base_dirs.append(write_dir / exp_dir / batch_string / model_name)
         write_base_dirs_code.append(write_dir / exp_dir / batch_string)
     
@@ -971,32 +971,129 @@ def detail_analysis_dir(experiment_dir: Path, model_name: str) -> list:
         - Extracts physical methods from the Java class definition named "TheClass".
         - Only subdirectories whose names include `model_name` are analyzed.
     """
-    batch_dirs = [d for d in experiment_dir.iterdir() if d.is_dir()]
     pattern = (
-        r'ctx_(?P<context>\d+)_depths_(?P<depths1>\d+)--(?P<depths2>\d+)_com_(?P<comments>\d+)_var_(?P<var>\d+)_loop_(?P<loop>\d+)_if_(?P<if>\d+)_qs_(?P<qs1>\d+)(?:--(?P<qs2>\d+))?_(?P<language>[a-zA-Z0-9]+)'
+    r'ctx[-_](?P<context>\d+)'  # ctx_30 or ctx-30
+    r'_depths[-_](?P<depths>(?:\d+[-_]?)+)'  # supports depths like 8--12 or 8_9_10
+    r'(?:_com[-_](?P<comments>\d+))?'        # optional _com
+    r'(?:_var[-_](?P<var>\d+))?'             # optional _var
+    r'(?:_loop[-_](?P<loop>\d+))?'           # optional _loop
+    r'(?:_if[-_](?P<if>\d+))?'               # optional _if
+    r'_qs[-_](?P<qs1>\d+)(?:--(?P<qs2>\d+))?'  # required _qs start, optional end
+    r'(?:_(?P<language>[a-zA-Z0-9]+))?'      # optional language
+    r'(?:_(?P<structure>linear|tree))?'      # optional structure
     )
+
+
     all_results = []
-    batch_num = 0
     batch_infos = []
-    for batch_dir in batch_dirs:
-        print(os.path.relpath(batch_dir, experiment_dir))
-        dir_name = str(os.path.relpath(batch_dir, experiment_dir))
-        match = re.match(pattern, dir_name)
+    batch_num = 0
+    visited = set()
+
+    for root, dirs, _ in os.walk(experiment_dir):
+        root_path = Path(root)
+
+        if root_path in visited:
+            continue
+
+        match = re.match(pattern, root_path.name)
+        rel_path = os.path.relpath(root_path, experiment_dir)
+        print(rel_path)
+
+        if match is None:
+            print(f"No match for directory: {rel_path}")
+            continue
+
+        # Prevent walking deeper into this matched batch directory
+        dirs.clear()
+        visited.add(root_path)
+
         batch_infos.append(match.groupdict())
         batch_num += 1
-        chains = batch_dir / "chains.txt"
-        methods = batch_dir / "methods.txt"
-        class_def = batch_dir / "system.txt"
-        class_file = batch_dir / "TheClass.java"
+
+        chains = root_path / "chains.txt"
+        methods = root_path / "methods.txt"
+        class_def = root_path / "system.txt"
+        class_file = root_path / "TheClass.java"
+
         physical_methods = extract_methods(extract_class_definition(class_def, "TheClass"))
-        subdirs = [d for d in batch_dir.iterdir() if d.is_dir()]
-        for subdir in subdirs:
-            if model_name in str(subdir):
+
+        for subdir in root_path.iterdir():
+            if subdir.is_dir() and model_name in str(subdir):
                 results = detailed_analysis(subdir, chains, methods, physical_methods)
                 results_with_batch = [r + (batch_num, class_file) for r in results]
                 all_results.extend(results_with_batch)
+
     return all_results, batch_infos
     
+
+def detail_analysis_dir_v2(experiment_dir: Path, model_name: str) -> list:
+    """
+    Traverses experiment_dir to find context directories, then analyses batch directories inside them.
+    """
+
+    # Pattern for outer "context" dirs
+    context_pattern = re.compile(
+        r'context[-_](?P<context>\d+)' +
+        r'_comment[-_](?P<comments>\d+)' +
+        r'_var[-_](?P<var>\d+)' +
+        r'_loop[-_](?P<loop>\d+)' +
+        r'_if[-_](?P<if>\d+)' +
+        r'(?:_(?P<language>[a-zA-Z0-9]+))?' +
+        r'(?:_(?P<structure>linear|tree))?'
+    )
+
+    # Pattern for inner batch dirs
+    batch_pattern = re.compile(
+        r'ctx[-_](?P<context>\d+)' +
+        r'_depths[-_](?P<depths>(?:\d+[-_]?)+)' +
+        r'_qs[-_](?P<qs1>\d+)(?:--(?P<qs2>\d+))?'
+    )
+
+    all_results = []
+    batch_infos = []
+    batch_num = 0
+
+    for context_dir in experiment_dir.iterdir():
+        if not context_dir.is_dir():
+            continue
+
+        match = context_pattern.match(context_dir.name)
+        if not match:
+            continue
+
+        batch_info = match.groupdict()
+
+        for batch_dir in context_dir.iterdir():
+            if not batch_dir.is_dir():
+                continue
+            if not batch_pattern.match(batch_dir.name):
+                continue
+
+            chains = batch_dir / "chains.txt"
+            methods = batch_dir / "methods.txt"
+            class_def = batch_dir / "system.txt"
+            class_file = batch_dir / "TheClass.java"
+
+            if not (chains.exists() and methods.exists() and class_def.exists()):
+                print(f"Missing files in {batch_dir}, skipping.")
+                continue
+
+            try:
+                physical_methods = extract_methods(extract_class_definition(class_def, "TheClass"))
+            except Exception as e:
+                print(f"Failed to extract methods from {class_def}: {e}")
+                continue
+
+            for subdir in batch_dir.iterdir():
+                if subdir.is_dir() and model_name in str(subdir):
+                    results = detailed_analysis(subdir, chains, methods, physical_methods)
+                    results_with_batch = [r + (batch_num + 1, class_file) for r in results]
+                    all_results.extend(results_with_batch)
+
+            batch_infos.append(batch_info)
+            batch_num += 1
+
+    return all_results, batch_infos
 
 # if len(sys.argv) > 1:
 #     directory = sys.argv[1]
@@ -1201,7 +1298,7 @@ def sort_results(results):
 
 def analyse_experiment(experiment, model):
     print(f"\nAnalysis of dir {experiment} for model {model}")
-    all_results, batch_infos = detail_analysis_dir(experiment, model)
+    all_results, batch_infos = detail_analysis_dir_v2(experiment, model)
     print(batch_infos)
     if len(all_results) == 0:
         print(f"No results for model {model}. Exiting...")
@@ -1232,6 +1329,11 @@ if __name__ == "__main__":
     # models = ["Mistral-Small"]
     # models = ["Coder-7B", "Coder-3B"]
     models = ["output-Mistral-Small-3.1-24B-Instruct-2503-Q6_K"]
+    models = ["Meta-Llama-3.1-8B.Q8_0",
+              "output-Qwen2.5-Coder-1.5B.Q8_0",
+              "output-Qwen2.5-Coder-7B-Instruct.Q8_0",
+              "output-Qwen2.5-Coder-7B-Instruct.Q8_0",
+              "output-qwen2.5-coder-32b-instruct-q8_0"]
         
     print("Analysing experiments for following directories:", experiments)
     print("And models:", models)

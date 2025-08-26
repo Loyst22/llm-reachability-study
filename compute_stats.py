@@ -28,9 +28,9 @@ def compute_accuracy_summary(df):
     df['is_right'] = (df['_answer type'] == 'RIGHT').astype(int)
     
     # Group by the three dimensions
-    summary = df.groupby(['Depth', '_Comments', '_Context']).agg({
+    summary = df.groupby(['Depth', '_Comments', '_Context', '_Model']).agg({
         'is_right': ['count', 'sum', 'mean'],
-        '_Model': 'first',  # Get model name (assuming same for each group)
+        # '_Model': 'first',  # Get model name (assuming same for each group)
         '_Experiment': 'first'  # Get experiment name
     }).round(4)
     
@@ -60,9 +60,9 @@ def compute_rfwr_within_right_summary(df):
     right_df['is_rfwr'] = (right_df['answer category'] == 'RIGHT_FOR_WRONG_REASON').astype(int)
 
     # Group by relevant dimensions
-    summary = right_df.groupby(['Depth', '_Comments', '_Context']).agg({
+    summary = right_df.groupby(['Depth', '_Comments', '_Context', '_Model']).agg({
         'is_rfwr': ['count', 'sum', 'mean'],
-        '_Model': 'first',
+        # '_Model': 'first',
         '_Experiment': 'first'
     }).round(4)
     
@@ -91,17 +91,17 @@ def compute_comprehensive_accuracy_summary(df):
                                   (df['answer category'] != 'RIGHT_FOR_WRONG_REASON')).astype(int)
     
     # Group by the three dimensions and compute all metrics
-    summary = df.groupby(['Depth', '_Comments', '_Context']).agg({
+    summary = df.groupby(['Depth', '_Comments', '_Context', '_Model']).agg({
         'is_right': ['count', 'sum', 'mean'],
         'is_rfwr': 'sum',
         'is_right_good_reason': 'sum',
-        '_Model': 'first',
+        # '_Model': 'first',
         '_Experiment': 'first'
     }).round(4)
     
     # Flatten and rename columns
     summary.columns = ['Total_Cases', 'Right_Cases', 'Base_Accuracy', 
-                      'RFWR_Cases', 'Right_Good_Reason_Cases', 'Model', 'Experiment']
+                      'RFWR_Cases', 'Right_Good_Reason_Cases', 'Experiment']
     
     # Reset index to make grouping columns regular columns
     summary = summary.reset_index()
@@ -122,7 +122,7 @@ def compute_comprehensive_accuracy_summary(df):
 
     # Reorder columns for better readability
     column_order = [
-        'Depth', '_Comments', '_Context', 'Model', 'Experiment',
+        'Depth', '_Comments', '_Context', '_Model', 'Experiment',
         'Total_Cases', 'Right_Cases', 'Base_Accuracy', 'Base_Accuracy_Percent',
         'RFWR_Cases', 'RFWR_Rate', 'RFWR_Rate_Percent',
         'Right_Good_Reason_Cases', 'Adjusted_Accuracy', 'Adjusted_Accuracy_Percent','Accuracy_Drop','Accuracy_Drop_Percent'

@@ -5,6 +5,8 @@ scripts
 test_scripts
 notes
 run_experiment-unix.py
+aggregate_ctx_comm_old.py
+content_analysis_old.py
 
 # Ignore generated files
 exp_out
