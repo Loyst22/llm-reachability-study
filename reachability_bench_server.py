@@ -91,17 +91,27 @@ def main():
     print("System prompt:", system_prompt)
     print("Questions:", questions_raw)
     
-    count_tokens_in_file(r"..\models\Mistral-7B-Instruct-v0.3.IQ1_S.gguf",
+    token_count, _ = count_tokens_in_file(r"..\models\Mistral-7B-Instruct-v0.3.IQ1_S.gguf",
                          r"..\llama-cpp-win\llama-tokenize.exe",
                          r".\experiments\adv_lin\ctx_10_depths_1--8_com_0_var_0_loop_0_if_0_qs_0--16_java\system.txt")
+    
+    # Add padding (for question)
+    token_count += 100 
+
+    # Take closest power of 2 above
+    next_pow2 = 1 << (token_count - 1).bit_length()
+    
+    # Take into account the number of slots
+    n_parallel = 1
+    ctx_size = n_parallel*next_pow2
     
     # Start llama-server in a subprocess
     server_cmd = [
         r"..\llama-cpp-win\llama-server.exe",
         "--model", r"..\models\Mistral-7B-Instruct-v0.3.IQ1_S.gguf",
-        "--ctx-size", "4096", # Total ctx so divide by parallel to get ctx_slot
+        "--ctx-size", str(ctx_size), # Total ctx so divide by parallel to get ctx_slot
         "--gpu-layers", "24",
-        "--parallel", "1",
+        "--parallel", str(n_parallel),
         "--cache-reuse", "128",
         "--no-warmup"
     ]
@@ -112,8 +122,10 @@ def main():
     # Give the server a few seconds to start
     time.sleep(5)
     
-    model_name = "Mistral-7B-Server-4"
+    model_name = "Mistral-7B-Server-5"
+    timings_list = []
 
+    start_all = time.time()
     # Ask all the questions
     for seq_id, question_line in enumerate(questions_raw):
         # Expect "X\tquestion"
@@ -135,10 +147,12 @@ def main():
         }
 
         try:
+            start_total = time.perf_counter()
             response = requests.post("http://localhost:8080/completions", json=payload)
             response.raise_for_status()
+            end_total = time.perf_counter()
             result = response.json()
-            processed_prompt = result.get("prompt", "").strip()
+            # processed_prompt = result.get("prompt", "").strip()
             answer = result.get("content", "").strip()
             # Append stopping word if it's YES or NO
             stopped_word = result.get("stopping_word", "")
@@ -147,8 +161,17 @@ def main():
                     answer += " "
                 answer += stopped_word
 
+            # Record timing
+            generation_time = result.get("timing", {}).get("generation_time", end_total - start_total)
+            total_time = end_total - start_total
+            timings_list.append({
+                "id": seq_id,
+                "generation_time": generation_time,
+                "total_time": total_time
+            })
+
             # Print in console
-            print(f"\n[Q{seq_id}] Distance={distance}")
+            print(f"[Q{seq_id}] ✅ done")
             # print("Question:", processed_prompt)
             # print("Answer:", answer)
 
@@ -158,6 +181,17 @@ def main():
         except requests.RequestException as e:
             print("Error while calling server:", e)
 
+    end_all = time.time()
+    # Print all timings
+    print("\n=== Per-request timings ===")
+    for t in sorted(timings_list, key=lambda x: x["id"]):
+        print(f"ID {t['id']:>2}: generation_time={t['generation_time']:.2f}s, total_time={t['total_time']:.2f}s")
+
+    total_gen_time = sum(t["generation_time"] for t in timings_list)
+    total_elapsed_time = end_all - start_all
+    print(f"\nTotal generation time (sum of requests): {total_gen_time:.2f}s")
+    print(f"Total elapsed wall-clock time: {total_elapsed_time:.2f}s")
+    
     # Stop the server
     server_proc.terminate()
     server_proc.wait()

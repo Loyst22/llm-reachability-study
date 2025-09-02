@@ -108,6 +108,26 @@ void write_result_to_env_directory(const std::string& subDir, const std::string&
     }
 }
 
+void append_result_to_env_directory(const std::string& subDir, int seq_id, const std::string& distance_str, const std::string& question, const std::string& response) {
+    const char* baseDir = std::getenv(WORK_DIR.c_str());
+    if (!baseDir) {
+        std::cerr << "Error: Environment variable " << WORK_DIR << " is not set." << std::endl;
+        return;
+    }
+    std::filesystem::path fullDirPath = std::filesystem::path(baseDir) / subDir;
+    std::filesystem::create_directories(fullDirPath);
+    std::filesystem::path fullFilePath = fullDirPath / "results";
+
+    std::ofstream outFile(fullFilePath, std::ios::app);
+    if (outFile) {
+        outFile << "[Q" << seq_id << "] Distance=" << distance_str << "\n";
+        outFile << "Question: " << question << "\n";
+        outFile << "Answer: " << response << "\n\n";
+    } else {
+        std::cerr << "Error: Unable to open file " << fullFilePath << std::endl;
+    }
+}
+
 std::string getFileNameWithoutExtension(const std::string& path) {
     //std::__fs::filesystem::path p(path);
     std::filesystem::path p(path);
@@ -200,7 +220,7 @@ struct client {
     std::string input;
     std::string prompt;
     std::string response;
-    int32_t distance = 0; //195: added for reachability
+    std::string distance; //195: added for reachability
     struct common_sampler * smpl = nullptr;
 };
 
@@ -394,7 +414,15 @@ int main(int argc, char ** argv) {
                     // reading in the prompt and the distance
                     auto input = split_string(q_prompts[g_seq_id], '\t');
                     client.input    = input[1];
-                    client.distance = std::stoi(input[0]);
+                    
+                    // distances are at positions 0 (+ 2 and 3 if tree shapes calls)
+                    std::string distances;
+                    for (size_t j = 0; j < input.size(); ++j) {
+                        if (j == 1) continue;
+                        if (!distances.empty()) distances += ", ";
+                        distances += input[j];
+                    }
+                    client.distance = distances;
                     client.prompt   = client.input + "\nAssistant:";
                     client.response = "";
 
@@ -537,8 +565,10 @@ int main(int argc, char ** argv) {
                             ::trim(client.response).c_str());
 
                     // 529-530: added for reachability
-                    write_result_to_env_directory(output_dir, "result" + std::to_string(client.seq_id) + "_" + std::to_string(client.distance) + ".txt", ::trim(client.input), ::trim(client.response).c_str());
-
+                    // write_result_to_env_directory(output_dir, "result" + std::to_string(client.seq_id) + "_" + std::to_string(client.distance) + ".txt", ::trim(client.input), ::trim(client.response).c_str());
+                    
+                    // modified to avoid generating too many files
+                    append_result_to_env_directory(output_dir, client.seq_id, client.distance, ::trim(client.input), ::trim(client.response));
 
                     n_total_prompt += client.n_prompt;
                     n_total_gen    += client.n_decoded;

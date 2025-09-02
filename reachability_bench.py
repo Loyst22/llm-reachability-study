@@ -93,7 +93,7 @@ def main():
     # NOTE: model can be adjusted here
     model_path = os.getenv("LLAMA_MODEL", "../models/Mistral-7B-Instruct-v0.3.IQ1_S.gguf")
     # model_path = os.getenv("LLAMA_MODEL", "../models/qwen2.5-coder-7b-instruct-q4_k_m.gguf")
-    model_name = "Mistral-7B"
+    model_name = "Mistral-7B-test-2"
     # model_name = "Qwen-Coder-7B"
     llm = Llama(model_path=model_path, n_ctx=2048, n_threads=8)
 
@@ -107,6 +107,7 @@ def main():
 
     # --- Processing loop ---
     seq_counter = 0
+    all_elasped = 0
     while seq_counter < len(q_prompts):
         for client in clients:
             if client.seq_id == -1 and seq_counter < len(q_prompts):
@@ -132,6 +133,7 @@ def main():
                 client.response = output["choices"][0]["text"]
 
                 elapsed = time.time() - client.start_time
+                all_elasped += elapsed
 
                 print(f"Client {client.id}, seq {client.seq_id}, time {elapsed:.2f}s")
                 print(f"Q: {client.input}\nA: {client.response}\n")
@@ -145,7 +147,7 @@ def main():
 
                 seq_counter += 1
 
-    print("All sequences processed.")
+    print(f"All sequences processed, time {all_elasped:.2f}s.")
 
 
 if __name__ == "__main__":

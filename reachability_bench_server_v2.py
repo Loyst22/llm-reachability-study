@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import pathlib
 import random
@@ -9,7 +10,7 @@ import time
 import requests
 
 # ==========================
-# Utilities
+#       Utilities
 # ==========================
 def read_file_from_env_directory(filename: str, work_dir_var: str = "LLAMA_WORK_DIR") -> str:
     """Read file from directory specified in environment variable."""
@@ -92,10 +93,28 @@ def count_tokens_in_file(model_path, tokenizer_path, file_path):
     print(f"✅ Token count: {token_count} (processed in {elapsed:.2f} seconds)\n")
     return token_count, output
 
+def wait_for_server(url="http://localhost:8080/health", timeout=60, interval=1):
+    """
+    Wait until the LLaMA server is ready.
+    Default health endpoint is /health.
+    """
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            r = requests.get(url)
+            if r.status_code == 200:
+                print("✅ Server is ready")
+                return True
+        except requests.RequestException:
+            pass
+        print("⌛ Waiting for server...")
+        time.sleep(interval)
+    raise TimeoutError(f"Server not ready after {timeout} seconds")
+
 # ==========================
-# Question worker (for parallel execution)
+#       Question worker
 # ==========================
-def ask_question(seq_id, distances, actual_question, system_prompt, model_name):
+def ask_question(seq_id, distances, actual_question, system_prompt, model_name, timings_list):
     prompt = f"{system_prompt}\n{actual_question}"
 
     payload = {
@@ -103,15 +122,19 @@ def ask_question(seq_id, distances, actual_question, system_prompt, model_name):
         "n_predict": 4096,
         "cache_prompt": True,
         # "id_slot": 0,   # ! IMPORTANT: must be -1 (auto) if multiple slots
-        "stop": ["User:", "YES", "NO"]
+        "stop": ["User:", "YES", "NO"],
+        "n_keep": ctx_size
     }
 
     try:
+        print(f"[Q{seq_id}] ⌛ Starting")
+        start_total = time.perf_counter()
         response = requests.post("http://localhost:8080/completions", json=payload)
         response.raise_for_status()
+        end_total = time.perf_counter()
+        
         result = response.json()
         answer = result.get("content", "").strip()
-
         stopped_word = result.get("stopping_word", "")
         if stopped_word in ["YES", "NO"]:
             if not answer.endswith(" "):
@@ -121,6 +144,15 @@ def ask_question(seq_id, distances, actual_question, system_prompt, model_name):
         distance_str = ", ".join(distances)
         global_content = f"[Q{seq_id}] Distance={distance_str}\nQuestion: {actual_question}\nAnswer: {answer}\n"
         append_file_to_env_model_dir("results.txt", global_content, model_name)
+        
+        # Record timing
+        generation_time = result.get("timing", {}).get("generation_time", end_total - start_total)
+        total_time = end_total - start_total
+        timings_list.append({
+            "id": seq_id,
+            "generation_time": generation_time,
+            "total_time": total_time
+        })
 
         print(f"[Q{seq_id}] ✅ done")
     except requests.RequestException as e:
@@ -128,8 +160,25 @@ def ask_question(seq_id, distances, actual_question, system_prompt, model_name):
 
 
 # ==========================
-# Main Function
+#       Main Function
 # ==========================
+
+
+sys_token_count, _ = count_tokens_in_file(r"..\models\Mistral-7B-Instruct-v0.3.IQ1_S.gguf",
+                                          r"..\llama-cpp-win\llama-tokenize.exe",
+                                          r".\experiments\adv_lin\ctx_10_depths_1--8_com_0_var_0_loop_0_if_0_qs_0--16_java\system.txt")
+    
+# Add padding (for question)
+token_count = sys_token_count + 100
+# Add padding (for response)  
+token_count += 500
+# Take closest power of 2 above
+next_pow2 = 1 << (token_count - 1).bit_length()
+
+# Take into account the number of slots
+n_parallel = 2
+ctx_size = n_parallel*next_pow2
+
 def main():
     random.seed(1234)
 
@@ -137,87 +186,77 @@ def main():
     system_prompt = read_file_from_env_directory("system.txt")
     questions_raw = read_file_from_env_directory("reachability_questions.txt").splitlines()
     
-    print("System prompt:", system_prompt)
-    print("Questions:", questions_raw)
-    
-    count_tokens_in_file(r"..\models\Mistral-7B-Instruct-v0.3.IQ1_S.gguf",
-                         r"..\llama-cpp-win\llama-tokenize.exe",
-                         r".\experiments\adv_lin\ctx_10_depths_1--8_com_0_var_0_loop_0_if_0_qs_0--16_java\system.txt")
+    # print("System prompt:", system_prompt)
+    # print("Questions:", questions_raw)
     
     # Start llama-server in a subprocess
     server_cmd = [
-        r"..\llama-cpp-win\llama-server.exe",
+        r"..\llama-cpp-win-newer\llama-server.exe",
         "--model", r"..\models\Mistral-7B-Instruct-v0.3.IQ1_S.gguf",
-        "--ctx-size", "32768", # Total ctx so divide by parallel to get ctx_slot, 32768=4096*8
+        "--ctx-size", str(ctx_size), # Total ctx so divide by parallel to get ctx_slot, ex: 32768=4096*8
+        "--keep", str(sys_token_count+10),
         "--gpu-layers", "24",
-        "--parallel", "8",
+        "--parallel", str(n_parallel),
         "--cache-reuse", "128",
-        "--no-warmup"
+        "--port", "8080", # Default is 8080 but just to make sure
+        "--kv-unified",
+        "--no-warmup",
     ]
 
     print("Starting LLaMA server...")
     server_proc = subprocess.Popen(server_cmd)
-    time.sleep(5)
+    wait_for_server()
     
-    model_name = "Mistral-7B-Server-4"
+    model_name = "Mistral-7B-Server-Parallel-4"
+    timings_list = []
+    start_all = time.time()
+    
+    # For effective KV caching, we process the first question before starting the parallel computations
+    """
+    question_line = questions_raw[0]
+    parts = question_line.split("\t")
+    actual_question = parts[1]
+    distances = [parts[0]] + (parts[2:] if len(parts) > 2 else [])
+    
+    ask_question(0, distances, actual_question, system_prompt, model_name, timings_list)
+    """
+    
 
-    # Ask all the questions
-    for seq_id, question_line in enumerate(questions_raw):
-        # Expect "X\tquestion"
-        try:
-            # distance, actual_question = question_line.split("\t", 1)
-            parts = question_line.split("\t")
-            distance = parts[0]
-            actual_question = parts[1]
-            extra_distances = parts[2:] if len(parts) > 2 else []
-        except ValueError:
-            print(f"Skipping malformed question line: {question_line}")
-            continue
-        
-        # Prepare the system prompt + current question
-        prompt = f"{system_prompt}\n{actual_question}"
+    with ThreadPoolExecutor(max_workers=n_parallel) as executor: # Check if it should be a lower max_workers value (8/None)
+        futures = []
+        for seq_id, question_line in enumerate(questions_raw): # questions_raw[1:]):
+            # seq_id += 1 # To take into account the first seq_id
+            try:
+                parts = question_line.split("\t")
+                actual_question = parts[1]
+                distances = [parts[0]] + (parts[2:] if len(parts) > 2 else [])
+            except ValueError:
+                print(f"Skipping malformed question line: {question_line}")
+                continue
+            futures.append(executor.submit(ask_question, seq_id, distances, actual_question, system_prompt, model_name, timings_list))
+            
+        # Wait for all to finish
+        for future in as_completed(futures):
+            pass
+    
+    end_all = time.time()
+    
+    # Print all timings
+    print("\n=== Per-request timings ===")
+    for t in sorted(timings_list, key=lambda x: x["id"]):
+        print(f"ID {t['id']:>2}: generation_time={t['generation_time']:.2f}s, total_time={t['total_time']:.2f}s")
 
-        payload = {
-            "prompt": [prompt],
-            "n_predict": 4096,
-            "cache_prompt": True,
-            "id_slot": 0,
-            "stop": ["User:", "YES", "NO"]
-        }
-
-        print(f"\n[Q{seq_id}] Distance={distance}")
-        try:
-            response = requests.post("http://localhost:8080/completions", json=payload)
-            response.raise_for_status()
-            result = response.json()
-            answer = result.get("content", "").strip()
-            # Append stopping word if it's YES or NO
-            stopped_word = result.get("stopping_word", "")
-            if stopped_word in ["YES", "NO"]:
-                if not answer.endswith(" "):
-                    answer += " "
-                answer += stopped_word
-
-            # Print in console
-            # processed_prompt = result.get("prompt", "").strip()
-            # print("Question:", processed_prompt)
-            # print("Answer:", answer)
-
-            distance_str = ", ".join([distance] + extra_distances)
-            global_content = (f"[Q{seq_id}] Distance={distance_str}\n"
-                              f"Question: {actual_question}\n"
-                              f"Answer: {answer}\n")
-            append_file_to_env_model_dir("results.txt", global_content, model_name)
-
-        except requests.RequestException as e:
-            print("Error while calling server:", e)
+    total_gen_time = sum(t["generation_time"] for t in timings_list)
+    total_elapsed_time = end_all - start_all
+    print(f"\nTotal generation time (sum of requests): {total_gen_time:.2f}s")
+    print(f"Total elapsed wall-clock time: {total_elapsed_time:.2f}s")
     
     # Stop the server
     server_proc.terminate()
     server_proc.wait()
 
 # ==========================
-# Entry Point
+#       Entry Point
 # ==========================
 if __name__ == "__main__":
     if len(sys.argv) != 2:
