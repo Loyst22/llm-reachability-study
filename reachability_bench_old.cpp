@@ -272,11 +272,8 @@ int main(int argc, char ** argv) {
 
     // insert new requests as soon as the previous one is done
     const bool cont_batching = params.cont_batching;
-    
-    // Old:
-    // const bool dump_kv_cache = params.dump_kv_cache;
-    // New:
-    const bool dump_kv_cache = true;
+
+    const bool dump_kv_cache = params.dump_kv_cache;
 
     // init llama.cpp
     llama_backend_init();
@@ -338,16 +335,7 @@ int main(int argc, char ** argv) {
     int32_t n_total_gen    = 0;
     int32_t n_cache_miss   = 0;
 
-    // Old:
-    // struct llama_kv_cache_view kvc_view = llama_kv_cache_view_init(ctx, n_clients);
-    // New: 
-    // Allocate state buffers for each client (including the base client at 0)
-    std::vector<std::vector<uint8_t>> client_states(n_clients + 1);
-    std::vector<size_t> state_sizes(n_clients + 1);
-    for (int i = 0; i <= n_clients; ++i) {
-        state_sizes[i] = llama_state_get_size(ctx);
-        client_states[i].resize(state_sizes[i]);
-    }
+    struct llama_kv_cache_view kvc_view = llama_kv_cache_view_init(ctx, n_clients);
 
     const auto t_main_start = ggml_time_us();
 
@@ -369,10 +357,7 @@ int main(int argc, char ** argv) {
 
         // assign the system KV cache to all parallel sequences
         for (int32_t i = 1; i <= n_clients; ++i) {
-            // Old:
-            // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
-            // New:
-            llama_state_get_data(ctx, client_states[i].data(), state_sizes[i]);
+            llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
         }
 
         LOG_INF("\n");
@@ -385,13 +370,8 @@ int main(int argc, char ** argv) {
 
     while (true) {
         if (dump_kv_cache) {
-            // Old:
-            // llama_kv_cache_view_update(ctx, &kvc_view);
-            // common_kv_cache_dump_view_seqs(kvc_view, 40);
-            // New:
-            for (int i = 0; i <= n_clients; ++i) {
-                printf("Client %d state size: %zu bytes\n", i, state_sizes[i]);
-            }
+            llama_kv_cache_view_update(ctx, &kvc_view);
+            common_kv_cache_dump_view_seqs(kvc_view, 40);
         }
 
         common_batch_clear(batch);
@@ -412,13 +392,9 @@ int main(int argc, char ** argv) {
         if (batch.n_tokens == 0) {
             // all sequences have ended - clear the entire KV cache
             for (int i = 1; i <= n_clients; ++i) {
-                // Old:
-                // llama_kv_self_seq_rm(ctx, i, -1, -1);
+                llama_kv_self_seq_rm(ctx, i, -1, -1);
                 // but keep the system prompt
-                // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
-                // New:
-                llama_state_set_data(ctx, client_states[i].data(), state_sizes[i]);
-                llama_state_get_data(ctx, client_states[i].data(), state_sizes[i]);
+                llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
             }
 
             LOG_INF("%s: clearing the KV cache\n", __func__);
@@ -575,12 +551,8 @@ int main(int argc, char ** argv) {
                     }
 
                     // delete only the generated part of the sequence, i.e. keep the system prompt in the cache
-                    // Old:
-                    // llama_kv_self_seq_rm(ctx,    client.id + 1, -1, -1);
-                    // llama_kv_self_seq_cp(ctx, 0, client.id + 1, -1, -1);
-                    // New:
-                    llama_state_set_data(ctx, client_states[client.id + 1].data(), state_sizes[client.id + 1]);
-                    llama_state_get_data(ctx, client_states[client.id + 1].data(), state_sizes[client.id + 1]);
+                    llama_kv_self_seq_rm(ctx,    client.id + 1, -1, -1);
+                    llama_kv_self_seq_cp(ctx, 0, client.id + 1, -1, -1);
 
                     const auto t_main_end = ggml_time_us();
 
