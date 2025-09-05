@@ -386,7 +386,7 @@ int main(int argc, char ** argv) {
         }
         */
 
-        LOG_INF("%s: system prompt snapshot saved (%zu bytes)\n", __func__, sys_state_size);
+        LOG_INF("%s: system prompt snapshot saved (%zu bytes)\n", __func__, state_sizes[0]);
     }
 
     LOG_INF("Processing requests ...\n\n");
