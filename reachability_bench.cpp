@@ -369,6 +369,8 @@ int main(int argc, char ** argv) {
 
         // New:
         // Save the system-prompt state snapshot (client #0 contains the sys prompt)
+        state_sizes[0] = llama_state_get_size(ctx);
+        client_states[0].resize(state_sizes[0]);
         llama_state_get_data(ctx, client_states[0].data(), state_sizes[0]);
 
         /* Old method, useless now with one way snapshot of cache
@@ -432,7 +434,11 @@ int main(int argc, char ** argv) {
                 // but keep the system prompt
                 // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
                 // New:
-                llama_state_set_data(ctx, client_states[0].data(), state_sizes[0]);
+                size_t sz = llama_state_get_size(ctx);   // current KV cache size
+                if (sz != state_sizes[0]) {
+                    client_states[0].resize(sz);         // resize buffer to match current expected size
+                }
+                llama_state_set_data(ctx, client_states[0].data(), sz);
             }
 
             LOG_INF("%s: clearing the KV cache\n", __func__);
@@ -596,7 +602,11 @@ int main(int argc, char ** argv) {
                     // llama_kv_self_seq_rm(ctx,    client.id + 1, -1, -1);
                     // llama_kv_self_seq_cp(ctx, 0, client.id + 1, -1, -1);
                     // New:
-                    llama_state_set_data(ctx, client_states[0].data(), state_sizes[0]);
+                    size_t sz = llama_state_get_size(ctx);   // current KV cache size
+                    if (sz != state_sizes[0]) {
+                        client_states[0].resize(sz);         // resize buffer to match current expected size
+                    }
+                    llama_state_set_data(ctx, client_states[0].data(), sz);
 
                     const auto t_main_end = ggml_time_us();
 
