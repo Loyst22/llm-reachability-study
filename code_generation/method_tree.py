@@ -71,7 +71,7 @@ class Node:
         self.var_types = [var.var_type for var in self.all_variables]
         
         # Return
-        tmp_return = control_flow.choose_n_vars(1, self.all_variables)
+        tmp_return = control_flow.choose_n_vars(0, self.all_variables) # ! Fix when necessary
         if tmp_return and return_value:
             self.return_variable = tmp_return[0]
             self.return_type = self.return_variable.var_type
