@@ -205,7 +205,6 @@ struct client {
     }
 
     int32_t id = 0;
-
     llama_seq_id seq_id = -1;
 
     llama_token sampled;
@@ -221,6 +220,7 @@ struct client {
     std::string prompt;
     std::string response;
     std::string distance; //195: added for reachability
+    
     struct common_sampler * smpl = nullptr;
 };
 
@@ -284,10 +284,8 @@ int main(int argc, char ** argv) {
 
     // load the target model
     common_init_result llama_init = common_init_from_params(params);
-
     llama_model * model = llama_init.model.get();
     llama_context * ctx = llama_init.context.get();
-
     const llama_vocab * vocab = llama_model_get_vocab(model);
 
     // 261-278 commented out for reachability
@@ -317,6 +315,7 @@ int main(int argc, char ** argv) {
 
     const int n_ctx = llama_n_ctx(ctx);
 
+    // prepare clients
     std::vector<client> clients(n_clients);
     for (size_t i = 0; i < clients.size(); ++i) {
         auto & client = clients[i];
@@ -324,6 +323,7 @@ int main(int argc, char ** argv) {
         client.smpl = common_sampler_init(model, params.sampling);
     }
 
+    // tokenize system prompt
     std::vector<llama_token> tokens_system;
     tokens_system = common_tokenize(ctx, k_system, true);
     const int32_t n_tokens_system = tokens_system.size();
@@ -367,15 +367,26 @@ int main(int argc, char ** argv) {
             return 1;
         }
 
+        // New:
+        // Save the system-prompt state snapshot (client #0 contains the sys prompt)
+        llama_state_get_data(ctx, client_states[0].data(), state_sizes[0]);
+
+        /* Old method, useless now with one way snapshot of cache
+        // Added to allow KV cache to be copied
+        size_t state_size = llama_state_get_size(ctx);
+
         // assign the system KV cache to all parallel sequences
         for (int32_t i = 1; i <= n_clients; ++i) {
             // Old:
             // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
             // New:
+            state_sizes[i] = state_size;
+            client_states[i].resize(state_size);
             llama_state_get_data(ctx, client_states[i].data(), state_sizes[i]);
         }
+        */
 
-        LOG_INF("\n");
+        LOG_INF("%s: system prompt snapshot saved (%zu bytes)\n", __func__, sys_state_size);
     }
 
     LOG_INF("Processing requests ...\n\n");
@@ -404,7 +415,11 @@ int main(int argc, char ** argv) {
 
             client.i_batch = batch.n_tokens;
 
-            common_batch_add(batch, client.sampled, n_tokens_system + client.n_prompt + client.n_decoded, { client.id + 1 }, true);
+            common_batch_add(batch, 
+                             client.sampled, 
+                             n_tokens_system + client.n_prompt + client.n_decoded, 
+                             { client.id + 1 }, 
+                             true);
 
             client.n_decoded += 1;
         }
@@ -417,8 +432,7 @@ int main(int argc, char ** argv) {
                 // but keep the system prompt
                 // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
                 // New:
-                llama_state_set_data(ctx, client_states[i].data(), state_sizes[i]);
-                llama_state_get_data(ctx, client_states[i].data(), state_sizes[i]);
+                llama_state_set_data(ctx, client_states[0].data(), state_sizes[0]);
             }
 
             LOG_INF("%s: clearing the KV cache\n", __func__);
@@ -437,8 +451,9 @@ int main(int argc, char ** argv) {
                     //client.input    = k_prompts[rand() % k_prompts.size()];
                     // reading in the prompt and the distance
                     auto input = split_string(q_prompts[g_seq_id], '\t');
-                    client.input    = input[1];
+                    client.input = input[1];
                     
+                    // New:
                     // distances are at positions 0 (+ 2 and 3 if tree shapes calls)
                     std::string distances;
                     for (size_t j = 0; j < input.size(); ++j) {
@@ -453,11 +468,14 @@ int main(int argc, char ** argv) {
                     common_sampler_reset(client.smpl);
 
                     // do not prepend BOS because we have a system prompt!
-                    std::vector<llama_token> tokens_prompt;
-                    tokens_prompt = common_tokenize(ctx, client.prompt, false);
+                    std::vector<llama_token> tokens_prompt = common_tokenize(ctx, client.prompt, false);
 
                     for (size_t i = 0; i < tokens_prompt.size(); ++i) {
-                        common_batch_add(batch, tokens_prompt[i], i + n_tokens_system, { client.id + 1 }, false);
+                        common_batch_add(batch, 
+                                         tokens_prompt[i], 
+                                         i + n_tokens_system, 
+                                         { client.id + 1 }, 
+                                         false);
                     }
 
                     // extract the logits only for the last token
@@ -538,7 +556,6 @@ int main(int argc, char ** argv) {
                 //        client.id, client.seq_id, client.sampled, client.n_decoded, client.i_batch);
 
                 const llama_token id = common_sampler_sample(client.smpl, ctx, client.i_batch - i);
-
                 common_sampler_accept(client.smpl, id, true);
 
                 if (client.n_decoded == 1) {
@@ -579,8 +596,7 @@ int main(int argc, char ** argv) {
                     // llama_kv_self_seq_rm(ctx,    client.id + 1, -1, -1);
                     // llama_kv_self_seq_cp(ctx, 0, client.id + 1, -1, -1);
                     // New:
-                    llama_state_set_data(ctx, client_states[client.id + 1].data(), state_sizes[client.id + 1]);
-                    llama_state_get_data(ctx, client_states[client.id + 1].data(), state_sizes[client.id + 1]);
+                    llama_state_set_data(ctx, client_states[0].data(), state_sizes[0]);
 
                     const auto t_main_end = ggml_time_us();
 
