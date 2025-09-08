@@ -205,6 +205,7 @@ struct client {
     }
 
     int32_t id = 0;
+
     llama_seq_id seq_id = -1;
 
     llama_token sampled;
@@ -220,7 +221,6 @@ struct client {
     std::string prompt;
     std::string response;
     std::string distance; //195: added for reachability
-    
     struct common_sampler * smpl = nullptr;
 };
 
@@ -326,6 +326,8 @@ int main(int argc, char ** argv) {
     std::vector<llama_token> tokens_system = common_tokenize(ctx, k_system, true);
     const int32_t n_tokens_system = tokens_system.size();
 
+    llama_seq_id g_seq_id = 0;
+
     // the max batch size is as large as the context to handle cases where we get very long input prompt from multiple
     // users. regardless of the size, the main loop will chunk the batch into a maximum of params.n_batch tokens at a time
     llama_batch batch = llama_batch_init(n_ctx, 0, 1);
@@ -334,62 +336,40 @@ int main(int argc, char ** argv) {
     int32_t n_total_gen    = 0;
     int32_t n_cache_miss   = 0;
     
+    // Old: http://github.com/abetlen/llama-cpp-python/issues/2026
+    // struct llama_kv_cache_view kvc_view = llama_kv_cache_view_init(ctx, n_clients);
+    
     const auto t_main_start = ggml_time_us();
 
-    // --------- 1. Evaluate system prompt and save its state ----------
-    
-    LOG_INF("%s: Evaluating the system prompt ...\n", __func__);
-    
-    for (int32_t i = 0; i < n_tokens_system; ++i) {
-        common_batch_add(batch, tokens_system[i], i, { 0 }, false);
-    }
-    
-    if (llama_decode(ctx, batch) != 0) {
-        LOG_ERR("%s: llama_decode() failed\n", __func__);
-        return 1;
-    }
-    
-    // New:
-    // Save the system-prompt state snapshot (client #0 contains the sys prompt)
-    size_t sys_state_size = llama_state_get_size(ctx);
-    std::vector<uint8_t> sys_state(sys_state_size);
-    llama_state_get_data(ctx, sys_state.data(), sys_state_size);
-    LOG_INF("%s: system prompt snapshot saved (%zu bytes)\n", __func__, sys_state_size);
-    
-    // Old:
-    // struct llama_kv_cache_view kvc_view = llama_kv_cache_view_init(ctx, n_clients);
-    // New: 
-    // Allocate per-client state buffers
-    std::vector<std::vector<uint8_t>> client_states(n_clients);
-    std::vector<size_t> state_sizes(n_clients, sys_state_size);
-    for (int i = 0; i < n_clients; i++) {
-        client_states[i].resize(sys_state_size);
-        std::copy(sys_state.begin(), sys_state.end(), client_states[i].begin());
-    }
+    LOG_INF("%s: Simulating parallel requests from clients:\n", __func__);
+    LOG_INF("%s: n_parallel = %d, n_sequences = %d, cont_batching = %d, system tokens = %d\n", __func__, n_clients, n_seq, cont_batching, n_tokens_system);
+    LOG_INF("\n");
 
-    /* Old method, useless now with one way snapshot of cache
-    // Added to allow KV cache to be copied
-    size_t state_size = llama_state_get_size(ctx);
-    
-    // assign the system KV cache to all parallel sequences
-    for (int32_t i = 1; i <= n_clients; ++i) {
-        // Old:
-        // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
-        // New:
-        state_sizes[i] = state_size;
-        client_states[i].resize(state_size);
-        llama_state_get_data(ctx, client_states[i].data(), state_sizes[i]);
+    // --------- 1. Evaluate system prompt and save its state ----------
+    {
+        LOG_INF("%s: Evaluating the system prompt ...\n", __func__);
+        
+        for (int32_t i = 0; i < n_tokens_system; ++i) {
+            common_batch_add(batch, tokens_system[i], i, { 0 }, false);
+        }
+        
+        if (llama_decode(ctx, batch) != 0) {
+            LOG_ERR("%s: llama_decode() failed\n", __func__);
+            return 1;
+        }
+        
+        // assign the system KV cache to all parallel sequences
+        for (int32_t i = 1; i <= n_clients; ++i) {
+            // Old:
+            // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
+            // New:
+            llama_memory_seq_cp(llama_get_memory(ctx), 0, i, -1, -1);
+        }
+
+        LOG_INF("\n");
     }
-    */
-   
-   
-   LOG_INF("%s: Simulating parallel requests from clients:\n", __func__);
-   LOG_INF("%s: n_parallel = %d, n_sequences = %d, cont_batching = %d, system tokens = %d\n", __func__, n_clients, n_seq, cont_batching, n_tokens_system);
-   LOG_INF("\n");
    
    LOG_INF("Processing requests ...\n\n");
-
-   llama_seq_id g_seq_id = 0;
 
     // 339-340: added for reachability
     std::string output_dir = "output-" + getFileNameWithoutExtension(params.model.path);
@@ -400,9 +380,6 @@ int main(int argc, char ** argv) {
             // llama_kv_cache_view_update(ctx, &kvc_view);
             // common_kv_cache_dump_view_seqs(kvc_view, 40);
             // New:
-            for (int i = 0; i <= n_clients; ++i) {
-                printf("Client %d state size: %zu bytes\n", i, client_state_sizes[i]);
-            }
         }
 
         common_batch_clear(batch);
@@ -414,21 +391,11 @@ int main(int argc, char ** argv) {
                 continue;
             }
 
-            // restore client state before adding tokens
-            llama_state_set_data(ctx, client_states[client.id].data(), state_sizes[client.id]);
-
             client.i_batch = batch.n_tokens;
 
-            common_batch_add(batch, client.sampled, 
-                             n_tokens_system + client.n_prompt + client.n_decoded, 
-                             { client.id + 1 }, true);
+            common_batch_add(batch, client.sampled, n_tokens_system + client.n_prompt + client.n_decoded, { client.id + 1 }, true);
 
             client.n_decoded += 1;
-
-            // save state after update
-            state_sizes[client.id] = llama_state_get_size(ctx);
-            client_states[client.id].resize(state_sizes[client.id]);
-            llama_state_get_data(ctx, client_states[client.id].data(), state_sizes[client.id]);
         }
 
         if (batch.n_tokens == 0) {
@@ -438,12 +405,10 @@ int main(int argc, char ** argv) {
                 // llama_kv_self_seq_rm(ctx, i, -1, -1);
                 // but keep the system prompt
                 // llama_kv_self_seq_cp(ctx, 0, i, -1, -1);
-            }
-            // New:
-            // reset all clients back to system prompt
-            for (int i = 0; i < n_clients; ++i) {
-                std::copy(sys_state.begin(), sys_state.end(), client_states[i].begin());
-                state_sizes[i] = sys_state_size;
+                // New:
+                llama_memory_seq_rm(llama_get_memory(ctx), i, -1, -1);
+                // but keep the system prompt
+                llama_memory_seq_cp(llama_get_memory(ctx), 0, i, -1, -1);
             }
 
             LOG_INF("%s: clearing the KV cache (restored to system prompt)\n", __func__);
@@ -481,15 +446,8 @@ int main(int argc, char ** argv) {
                     // do not prepend BOS because we have a system prompt!
                     std::vector<llama_token> tokens_prompt = common_tokenize(ctx, client.prompt, false);
 
-                    // restore sys_state for this client
-                    llama_state_set_data(ctx, client_states[client.id].data(), state_sizes[client.id]);
-
                     for (size_t i = 0; i < tokens_prompt.size(); ++i) {
-                        common_batch_add(batch, 
-                                         tokens_prompt[i], 
-                                         i + n_tokens_system, 
-                                         { client.id + 1 }, 
-                                         false);
+                        common_batch_add(batch, tokens_prompt[i], i + n_tokens_system, { client.id + 1 }, false);
                     }
 
                     // extract the logits only for the last token
@@ -504,6 +462,11 @@ int main(int argc, char ** argv) {
                     LOG_INF("\033[31mClient %3d, seq %4d, started decoding ...\033[0m\n", client.id, client.seq_id);
 
                     g_seq_id += 1;
+
+                    // insert new requests one-by-one
+                    //if (cont_batching) {
+                    //    break;
+                    //}
                 }
             }
         }
@@ -606,9 +569,8 @@ int main(int argc, char ** argv) {
                     // llama_kv_self_seq_rm(ctx,    client.id + 1, -1, -1);
                     // llama_kv_self_seq_cp(ctx, 0, client.id + 1, -1, -1);
                     // New:
-                    // reset to sys_state
-                    std::copy(sys_state.begin(), sys_state.end(), client_states[client.id].begin());
-                    state_sizes[client.id] = sys_state_size;
+                    llama_memory_seq_rm(llama_get_memory(ctx),    client.id + 1, -1, -1);
+                    llama_memory_seq_cp(llama_get_memory(ctx), 0, client.id + 1, -1, -1);
 
                     const auto t_main_end = ggml_time_us();
 
