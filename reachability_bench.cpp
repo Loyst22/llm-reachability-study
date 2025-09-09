@@ -116,7 +116,7 @@ void append_result_to_env_directory(const std::string& subDir, int seq_id, const
     }
     std::filesystem::path fullDirPath = std::filesystem::path(baseDir) / subDir;
     std::filesystem::create_directories(fullDirPath);
-    std::filesystem::path fullFilePath = fullDirPath / "results";
+    std::filesystem::path fullFilePath = fullDirPath / "results.txt";
 
     std::ofstream outFile(fullFilePath, std::ios::app);
     if (outFile) {
